@@ -1,0 +1,366 @@
+{
+  "info": {
+    "name": "Employee Leave Management System (ELMS) API",
+    "description": "Complete Postman collection for testing the Next.js, Prisma, PostgreSQL ELMS Backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leaveId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register Employee",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Employee\",\n  \"email\": \"jane.employee@company.com\",\n  \"password\": \"Password@123\",\n  \"department\": \"Engineering\",\n  \"role\": \"EMPLOYEE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Admin User\",\n  \"email\": \"admin.hr@company.com\",\n  \"password\": \"AdminPassword@123\",\n  \"department\": \"Human Resources\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Login Employee",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.employee@company.com\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.hr@company.com\",\n  \"password\": \"AdminPassword@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Current Session (/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Employee Profile",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/profile", "host": ["{{baseUrl}}"], "path": ["api", "profile"] }
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane E. Doe\",\n  \"department\": \"Cloud Platform\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/profile", "host": ["{{baseUrl}}"], "path": ["api", "profile"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Employee Leave Management",
+      "item": [
+        {
+          "name": "Apply for Leave",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set('leaveId', jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveType\": \"CASUAL\",\n  \"startDate\": \"2026-11-20\",\n  \"endDate\": \"2026-11-22\",\n  \"reason\": \"Personal family matter\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/leaves", "host": ["{{baseUrl}}"], "path": ["api", "leaves"] }
+          }
+        },
+        {
+          "name": "Get My Leave History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/leaves", "host": ["{{baseUrl}}"], "path": ["api", "leaves"] }
+          }
+        },
+        {
+          "name": "Filter Leave History (status & leaveType)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/leaves?status=PENDING&leaveType=CASUAL",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "leaves"],
+              "query": [
+                { "key": "status", "value": "PENDING" },
+                { "key": "leaveType", "value": "CASUAL" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Leave Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/leaves/{{leaveId}}", "host": ["{{baseUrl}}"], "path": ["api", "leaves", "{{leaveId}}"] }
+          }
+        },
+        {
+          "name": "Cancel Pending Leave",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/leaves/{{leaveId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "leaves", "{{leaveId}}", "cancel"] }
+          }
+        },
+        {
+          "name": "Get My Leave Balance Quota",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/leaves/balance", "host": ["{{baseUrl}}"], "path": ["api", "leaves", "balance"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Employee Dashboard",
+      "item": [
+        {
+          "name": "Get Employee Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/dashboard", "host": ["{{baseUrl}}"], "path": ["api", "dashboard"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Admin Leave Management",
+      "item": [
+        {
+          "name": "List All Employee Applications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/leaves", "host": ["{{baseUrl}}"], "path": ["api", "admin", "leaves"] }
+          }
+        },
+        {
+          "name": "Filter Applications (status & type)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/leaves?status=PENDING&leaveType=CASUAL",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "leaves"],
+              "query": [
+                { "key": "status", "value": "PENDING" },
+                { "key": "leaveType", "value": "CASUAL" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Leave Application",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"adminRemarks\": \"Approved. Ensure project tasks are handed over.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/admin/leaves/{{leaveId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "leaves", "{{leaveId}}"] }
+          }
+        },
+        {
+          "name": "Reject Leave Application",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REJECTED\",\n  \"adminRemarks\": \"Team coverage is insufficient during this sprint window.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/admin/leaves/{{leaveId}}", "host": ["{{baseUrl}}"], "path": ["api", "admin", "leaves", "{{leaveId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Admin Employee Management",
+      "item": [
+        {
+          "name": "List All Employees (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/employees?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "employees"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Employees by Name or Email",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/employees?search=Jane",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "employees"],
+              "query": [{ "key": "search", "value": "Jane" }]
+            }
+          }
+        },
+        {
+          "name": "Filter Employees by Department",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/employees?department=Engineering",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "employees"],
+              "query": [{ "key": "department", "value": "Engineering" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Admin Dashboard",
+      "item": [
+        {
+          "name": "Get Admin Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["api", "admin", "dashboard"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+

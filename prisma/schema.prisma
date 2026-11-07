@@ -1,0 +1,202 @@
+// Prisma Schema for Employee Leave Management System (ELMS)
+// PostgreSQL with Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User roles in the system
+enum Role {
+  EMPLOYEE
+  ADMIN
+}
+
+// Types of leaves an employee can apply for
+enum LeaveType {
+  CASUAL
+  SICK
+  EARNED
+}
+
+// Current status of a leave or WFH application
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// -----------------------------------------------------------------------------
+// 1. User Model (Employees and Administrators)
+// -----------------------------------------------------------------------------
+model User {
+  id         String   @id @default(uuid())
+  fullName   String
+  email      String   @unique
+  password   String // Hashed password using bcryptjs
+  department String
+  role       Role     @default(EMPLOYEE)
+  createdAt  DateTime @default(now())
+
+  // Relations
+  leaveApplications     LeaveApplication[]
+  wfhRequests           WFHRequest[]
+  quarterlyEntitlements QuarterlyEntitlement[]
+  leaveBalance          LeaveBalance?
+
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+// 2. LeaveApplication Model (Leave requests submitted by employees)
+// -----------------------------------------------------------------------------
+model LeaveApplication {
+  id           String      @id @default(uuid())
+  userId       String
+  leaveType    LeaveType
+  startDate    DateTime
+  endDate      DateTime
+  totalDays    Int
+  reason       String      @db.Text
+  status       LeaveStatus @default(PENDING)
+  adminRemarks String?     @db.Text
+  appliedAt    DateTime    @default(now())
+
+  // Relations
+  user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allocations LeaveRequestAllocation[]
+
+  @@index([userId, status])
+  @@index([startDate, endDate])
+  @@map("leave_applications")
+}
+
+// -----------------------------------------------------------------------------
+// 3. WFHRequest Model (Work From Home requests submitted by employees)
+// -----------------------------------------------------------------------------
+model WFHRequest {
+  id           String      @id @default(uuid())
+  userId       String
+  startDate    DateTime
+  endDate      DateTime
+  totalDays    Int
+  reason       String      @db.Text
+  status       LeaveStatus @default(PENDING)
+  adminRemarks String?     @db.Text
+  appliedAt    DateTime    @default(now())
+
+  // Relations
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allocations WFHRequestAllocation[]
+
+  @@index([userId, status])
+  @@index([startDate, endDate])
+  @@map("wfh_requests")
+}
+
+// -----------------------------------------------------------------------------
+// 4. QuarterlyEntitlement Model (Tracks annual quarterly allocation & usage)
+// -----------------------------------------------------------------------------
+model QuarterlyEntitlement {
+  id      String @id @default(uuid())
+  userId  String
+  year    Int // e.g. 2026
+  quarter Int // 1: Jan-Mar, 2: Apr-Jun, 3: Jul-Sep, 4: Oct-Dec
+
+  // Entitlements allocated per quarter (3 each)
+  casualAllocated Int @default(3)
+  sickAllocated   Int @default(3)
+  wfhAllocated    Int @default(3)
+
+  // Sick leave carry-in and carry-out within the same calendar year
+  sickCarryIn  Int @default(0) // Carried in from previous quarter of same year
+  sickCarryOut Int @default(0) // Unused sick days carried forward to next quarter
+
+  // Approved usage
+  casualUsed Int @default(0)
+  sickUsed   Int @default(0)
+  wfhUsed    Int @default(0)
+
+  // Reserved quota (Pending requests that hold allocation)
+  casualReserved Int @default(0)
+  sickReserved   Int @default(0)
+  wfhReserved    Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaveAllocations LeaveRequestAllocation[]
+  wfhAllocations   WFHRequestAllocation[]
+
+  // Strictly prevent duplicate quarterly entitlement records for the same employee, year, and quarter
+  @@unique([userId, year, quarter])
+  @@index([userId, year])
+  @@map("quarterly_entitlements")
+}
+
+// -----------------------------------------------------------------------------
+// 5. LeaveRequestAllocation Model (Cross-quarter leave distribution)
+// -----------------------------------------------------------------------------
+model LeaveRequestAllocation {
+  id                     String      @id @default(uuid())
+  leaveApplicationId     String
+  quarterlyEntitlementId String
+  year                   Int
+  quarter                Int
+  allocatedDays          Int
+  status                 LeaveStatus @default(PENDING)
+  createdAt              DateTime    @default(now())
+
+  // Relations
+  leaveApplication     LeaveApplication     @relation(fields: [leaveApplicationId], references: [id], onDelete: Cascade)
+  quarterlyEntitlement QuarterlyEntitlement @relation(fields: [quarterlyEntitlementId], references: [id], onDelete: Cascade)
+
+  @@unique([leaveApplicationId, year, quarter])
+  @@index([quarterlyEntitlementId])
+  @@index([year, quarter])
+  @@map("leave_request_allocations")
+}
+
+// -----------------------------------------------------------------------------
+// 6. WFHRequestAllocation Model (Cross-quarter WFH distribution)
+// -----------------------------------------------------------------------------
+model WFHRequestAllocation {
+  id                     String      @id @default(uuid())
+  wfhRequestId           String
+  quarterlyEntitlementId String
+  year                   Int
+  quarter                Int
+  allocatedDays          Int
+  status                 LeaveStatus @default(PENDING)
+  createdAt              DateTime    @default(now())
+
+  // Relations
+  wfhRequest           WFHRequest           @relation(fields: [wfhRequestId], references: [id], onDelete: Cascade)
+  quarterlyEntitlement QuarterlyEntitlement @relation(fields: [quarterlyEntitlementId], references: [id], onDelete: Cascade)
+
+  @@unique([wfhRequestId, year, quarter])
+  @@index([quarterlyEntitlementId])
+  @@index([year, quarter])
+  @@map("wfh_request_allocations")
+}
+
+// -----------------------------------------------------------------------------
+// Legacy Balance Model (Maintained for backward compatibility)
+// -----------------------------------------------------------------------------
+model LeaveBalance {
+  id          String @id @default(uuid())
+  userId      String @unique
+  casualLeave Int    @default(12)
+  sickLeave   Int    @default(10)
+  earnedLeave Int    @default(15)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("leave_balances")
+}
