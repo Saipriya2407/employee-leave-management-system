@@ -5,64 +5,264 @@ import { useState } from "react";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+  });
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-    alert("Login form submitted!");
+  function handleChange(e) {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
   }
 
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setMessage("");
+
+    try {
+      setLoading(true);
+
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message || "Invalid email or password");
+        return;
+      }
+
+      setMessage("Login successful!");
+
+      // Redirect based on the role returned by your backend.
+      if (data.user?.role === "ADMIN") {
+        window.location.href = "/admin/dashboard";
+      } else {
+        window.location.href = "/employee/dashboard";
+      }
+    } catch {
+      setMessage("Unable to connect to server");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const inputClass =
+    "mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
+    <main className="min-h-screen bg-gray-50">
 
-        <h1 className="text-3xl font-bold text-center text-blue-600">
-          Welcome Back
-        </h1>
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
 
-        <p className="mt-2 text-center text-gray-500">
-          Employee Leave Management System
-        </p>
+          <Link href="/" className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-700 text-2xl font-bold text-white">
+              E
+            </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <div>
+              <h1 className="text-xl font-bold text-blue-900">
+                ELMS
+              </h1>
 
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full rounded-lg border p-3 text-black"
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full rounded-lg border p-3 text-black"
-          />
-
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700"
-          >
-            Login
-          </button>
-
-        </form>
-
-        <p className="mt-5 text-center text-gray-600">
-          Don't have an account?{" "}
-          <Link href="/register" className="font-semibold text-blue-600">
-            Register
+              <p className="text-xs text-gray-500">
+                Employee Leave Management System
+              </p>
+            </div>
           </Link>
-        </p>
 
-      </div>
-    </div>
+          <Link
+            href="/"
+            className="font-medium text-gray-700 hover:text-blue-700"
+          >
+            Home
+          </Link>
+
+        </div>
+      </header>
+
+      {/* Navigation */}
+      <nav className="bg-blue-900 text-white">
+        <div className="mx-auto flex max-w-7xl gap-6 px-6 py-4">
+
+          <Link href="/" className="hover:text-blue-200">
+            Home
+          </Link>
+
+          <span>|</span>
+
+          <span className="font-semibold">
+            Login
+          </span>
+
+        </div>
+      </nav>
+
+      {/* Login Section */}
+      <section className="px-4 py-12">
+
+        <div className="mx-auto max-w-3xl">
+
+          {/* Heading */}
+          <div className="mb-8 text-center">
+
+            <p className="font-bold uppercase tracking-widest text-blue-700">
+              Welcome Back
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">
+              Login to ELMS
+            </h2>
+
+            <p className="mt-4 text-gray-500">
+              Access your employee leave management dashboard.
+            </p>
+
+          </div>
+
+          {/* Form */}
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10"
+          >
+
+            <h3 className="text-xl font-bold text-gray-900">
+              Login
+            </h3>
+
+            <p className="mt-2 text-gray-500">
+              Enter your account details below.
+            </p>
+
+            <hr className="my-6" />
+
+            {/* Email */}
+            <div className="mb-5">
+
+              <label className="font-medium text-gray-700">
+                Email Address
+              </label>
+
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="Enter your email address"
+                className={inputClass}
+                autoComplete="email"
+                required
+              />
+
+            </div>
+
+            {/* Password */}
+            <div className="mb-6">
+
+              <label className="font-medium text-gray-700">
+                Password
+              </label>
+
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                className={inputClass}
+                autoComplete="current-password"
+                required
+              />
+
+              {/* Show Password */}
+              <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(e) =>
+                    setShowPassword(e.target.checked)
+                  }
+                  className="h-4 w-4"
+                />
+
+                Show Password
+
+              </label>
+
+            </div>
+
+            {/* Message */}
+            {message && (
+              <p className="mb-5 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+                {message}
+              </p>
+            )}
+
+            {/* Login Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-blue-700 py-3 font-semibold text-white transition hover:bg-blue-800 disabled:opacity-50"
+            >
+              {loading ? "Logging in..." : "Login"}
+            </button>
+
+            {/* Registration Links */}
+            <div className="mt-6 text-center text-sm text-gray-500">
+
+              <p>
+                Don't have an employee account?
+              </p>
+
+              <Link
+                href="/admin/register"
+                className="mt-2 inline-block font-semibold text-blue-700 hover:underline"
+              >
+                Employee Registration
+              </Link>
+
+              <p className="mt-4">
+                Need an admin account?
+              </p>
+
+              <Link
+                href="/admin"
+                className="mt-2 inline-block font-semibold text-blue-700 hover:underline"
+              >
+                Admin Registration
+              </Link>
+
+            </div>
+
+          </form>
+
+        </div>
+
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t bg-white py-6 text-center text-sm text-gray-500">
+        © 2026 Employee Leave Management System
+      </footer>
+
+    </main>
   );
 }
+
