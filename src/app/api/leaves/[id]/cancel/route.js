@@ -1,114 +1,84 @@
+
 import prisma from "@/lib/prisma";
 import { requireAuth, verifyOwnership } from "@/lib/permissions";
 import { successResponse, errorResponse } from "@/lib/response";
-import { isValidUUID } from "@/lib/validation";
+import { releaseQuarterlyAllocation } from "@/lib/quarterly-policy";
 
-/**
- * PATCH /api/leaves/[id]/cancel
- * Cancels a leave application submitted by an employee
- *
- * Requirements:
- * 1. Verify JWT authentication.
- * 2. Validate application ID format.
- * 3. Enforce ownership: only the applicant (or an admin) can cancel.
- * 4. Cancellation allowed ONLY for PENDING applications.
- * 5. Applications already APPROVED, REJECTED, or CANCELLED cannot be cancelled.
- * 6. Updates status to CANCELLED and returns the updated application.
- */
 export async function PATCH(request, { params }) {
   try {
-    // 1. Verify JWT
     const auth = await requireAuth(request);
-    if (!auth.authorized) {
-      return auth.response;
-    }
+    if (!auth.authorized) return auth.response;
 
     const { id } = await params;
 
-    // 2. Validate application ID format
-    if (!isValidUUID(id)) {
-      return errorResponse("Invalid leave application ID format. Must be a valid UUID.", 400);
-    }
+    const updated = await prisma.$transaction(
+      async (tx) => {
+        const leave = await tx.leaveApplication.findUnique({
+          where: { id },
+          include: {
+            allocations: true,
+            leaveType: true,
+          },
+        });
 
-    // 3. Find the leave application in PostgreSQL
-    const leave = await prisma.leaveApplication.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        userId: true,
-        leaveType: true,
-        startDate: true,
-        endDate: true,
-        totalDays: true,
-        reason: true,
-        status: true,
-        adminRemarks: true,
-        appliedAt: true,
+        if (!leave) {
+          throw new Error("NOT_FOUND");
+        }
+
+        const ownerCheck = verifyOwnership(auth, leave.userId);
+        if (!ownerCheck.authorized) {
+          throw new Error("FORBIDDEN");
+        }
+
+        if (leave.status !== "PENDING") {
+          throw new Error("ONLY_PENDING_CAN_BE_CANCELLED");
+        }
+
+        if (leave.allocations.length === 0) {
+          throw new Error("MISSING_RESERVATIONS");
+        }
+
+        await releaseQuarterlyAllocation(tx, leave.allocations);
+
+        return tx.leaveApplication.update({
+          where: { id },
+          data: { status: "CANCELLED" },
+          include: {
+            leaveType: true,
+          },
+        });
       },
-    });
-
-    if (!leave) {
-      return errorResponse("Leave application not found.", 404);
-    }
-
-    // 4. Verify ownership (employee can only cancel their own)
-    const ownerCheck = verifyOwnership(auth, leave.userId);
-    if (!ownerCheck.authorized) {
-      return ownerCheck.response;
-    }
-
-    // 5. Enforce cancellation rule: ONLY PENDING applications can be cancelled
-    if (leave.status === "CANCELLED") {
-      return errorResponse("This leave application is already cancelled.", 400);
-    }
-
-    if (leave.status === "APPROVED") {
-      return errorResponse(
-        "Cannot cancel a leave application that has already been approved. Please contact your administrator.",
-        400
-      );
-    }
-
-    if (leave.status === "REJECTED") {
-      return errorResponse(
-        "Cannot cancel a leave application that has already been rejected.",
-        400
-      );
-    }
-
-    if (leave.status !== "PENDING") {
-      return errorResponse(
-        `Cannot cancel an application with current status "${leave.status}". Only PENDING applications can be cancelled.`,
-        400
-      );
-    }
-
-    // 6. Update status to CANCELLED in PostgreSQL
-    const updatedLeave = await prisma.leaveApplication.update({
-      where: { id },
-      data: { status: "CANCELLED" },
-      select: {
-        id: true,
-        userId: true,
-        leaveType: true,
-        startDate: true,
-        endDate: true,
-        totalDays: true,
-        reason: true,
-        status: true,
-        adminRemarks: true,
-        appliedAt: true,
-      },
-    });
+      { isolationLevel: "Serializable" }
+    );
 
     return successResponse(
-      updatedLeave,
-      "Leave application has been cancelled successfully.",
+      updated,
+      "Leave application cancelled and reserved days released.",
       200
     );
   } catch (error) {
     console.error("Cancel Leave Error:", error);
-    return errorResponse("Internal server error cancelling leave application.", 500);
+
+    if (error.message === "NOT_FOUND") {
+      return errorResponse("Leave application not found.", 404);
+    }
+
+    if (error.message === "FORBIDDEN") {
+      return errorResponse("You cannot cancel another employee's application.", 403);
+    }
+
+    if (error.message === "ONLY_PENDING_CAN_BE_CANCELLED") {
+      return errorResponse("Only pending applications can be cancelled.", 400);
+    }
+
+    if (error.message === "MISSING_RESERVATIONS") {
+      return errorResponse("Quarterly reservations are missing for this application.", 409);
+    }
+
+    if (error.code === "P2034") {
+      return errorResponse("Concurrent update detected. Please try again.", 409);
+    }
+
+    return errorResponse("Unable to cancel leave application.", 500);
   }
 }
-

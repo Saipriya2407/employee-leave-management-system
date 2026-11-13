@@ -1,30 +1,36 @@
-import { PrismaClient } from "@prisma/client";
+
+import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 const globalForPrisma = globalThis;
 
-let prisma;
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is missing from the .env file.");
+}
 
-if (!globalForPrisma.prisma) {
-  const connectionString = process.env.DATABASE_URL;
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool);
+const pool =
+  globalForPrisma.pgPool ??
+  new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
 
-  prisma = new PrismaClient({
+const adapter = new PrismaPg(pool);
+
+const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
     adapter,
     log:
       process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
+        ? ["error", "warn"]
         : ["error"],
   });
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = prisma;
-  }
-} else {
-  prisma = globalForPrisma.prisma;
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.pgPool = pool;
+  globalForPrisma.prisma = prisma;
 }
 
-export { prisma };
 export default prisma;
+export { prisma };

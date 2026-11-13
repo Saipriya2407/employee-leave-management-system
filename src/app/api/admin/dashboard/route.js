@@ -1,6 +1,13 @@
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
-import { successResponse, errorResponse } from "@/lib/response";
+import { successResponse, errorResponse, methodNotAllowedResponse } from "@/lib/response";
+
+export async function POST() {
+  return methodNotAllowedResponse(
+    ["GET"],
+    "HTTP 405 Method Not Allowed: /api/admin/dashboard requires a GET request with an Authorization Bearer token header."
+  );
+}
 
 /**
  * GET /api/admin/dashboard

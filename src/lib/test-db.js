@@ -1,19 +1,26 @@
-import prisma from "./prisma.js";
 
-async function testConnection() {
-  console.log("Testing PostgreSQL database connection via Prisma...");
+const { PrismaClient } = require("../generated/prisma");
+
+const prisma = new PrismaClient();
+
+async function testDatabase() {
   try {
+    console.log("Connecting to Neon database...");
+
     await prisma.$connect();
-    console.log("Database connection successful!");
-    const userCount = await prisma.user.count();
-    console.log(`Current users in database: ${userCount}`);
+
+    console.log("Database connected successfully!");
+
+    const users = await prisma.user.findMany();
+
+    console.log("Total users:", users.length);
+    console.log("Users:", users);
+
   } catch (error) {
-    console.error("Database connection failed:");
-    console.error(error.message);
+    console.error("Database connection failed:", error.message);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-testConnection();
-
+testDatabase();

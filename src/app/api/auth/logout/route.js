@@ -1,4 +1,11 @@
-import { successResponse } from "@/lib/response";
+import { successResponse, methodNotAllowedResponse } from "@/lib/response";
+
+export async function GET() {
+  return methodNotAllowedResponse(
+    ["POST"],
+    "HTTP 405 Method Not Allowed: /api/auth/logout requires a POST request."
+  );
+}
 
 /**
  * POST /api/auth/logout

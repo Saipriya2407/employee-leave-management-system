@@ -1,7 +1,14 @@
 import prisma from "@/lib/prisma";
 import { comparePassword, signToken } from "@/lib/auth";
-import { successResponse, errorResponse } from "@/lib/response";
+import { successResponse, errorResponse, methodNotAllowedResponse } from "@/lib/response";
 import { validateEmail } from "@/lib/validation";
+
+export async function GET() {
+  return methodNotAllowedResponse(
+    ["POST"],
+    "HTTP 405 Method Not Allowed: /api/auth/login requires a POST request with JSON body { email, password }. Browsers perform GET requests by default when opening URLs in the address bar."
+  );
+}
 
 /**
  * POST /api/auth/login
@@ -88,6 +95,12 @@ export async function POST(request) {
     return response;
   } catch (error) {
     console.error("Login Error:", error);
+    if (error?.code === "ECONNREFUSED" || error?.message?.includes("connect") || error?.name === "PrismaClientKnownRequestError") {
+      return errorResponse(
+        "Database Connection Failed: Unable to connect to PostgreSQL at localhost:5432. Please ensure PostgreSQL is running or update DATABASE_URL in .env.",
+        503
+      );
+    }
     return errorResponse("Internal server error during login.", 500);
   }
 }

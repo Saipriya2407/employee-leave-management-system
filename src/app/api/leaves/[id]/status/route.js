@@ -1,115 +1,117 @@
+
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { successResponse, errorResponse } from "@/lib/response";
+import {
+  approveQuarterlyAllocation,
+  releaseQuarterlyAllocation,
+} from "@/lib/quarterly-policy";
 
-const LEAVE_BALANCE_FIELDS = {
-  CASUAL: "casualLeave",
-  SICK: "sickLeave",
-  EARNED: "earnedLeave",
-};
-
-/**
- * PATCH /api/leaves/[id]/status
- * Admin endpoint to Approve or Reject a leave application
- */
 export async function PATCH(request, { params }) {
   try {
-    // 1. Guard route: Admin access only
     const auth = await requireAdmin(request);
-    if (!auth.authorized) {
-      return auth.response;
-    }
+    if (!auth.authorized) return auth.response;
 
     const { id } = await params;
     const body = await request.json().catch(() => null);
 
-    if (!body) {
-      return errorResponse("Invalid JSON request body.", 400);
-    }
+    if (!body) return errorResponse("Invalid JSON request body.", 400);
 
-    const { status, adminRemarks } = body;
+    const nextStatus = body.status?.toUpperCase();
+    const adminRemarks =
+      typeof body.adminRemarks === "string"
+        ? body.adminRemarks.trim()
+        : null;
 
-    // 2. Validate requested status
-    if (!status || !["APPROVED", "REJECTED"].includes(status.toUpperCase())) {
-      return errorResponse("Status must be either 'APPROVED' or 'REJECTED'.", 400);
-    }
-
-    const nextStatus = status.toUpperCase();
-
-    // 3. Find the target leave application
-    const leave = await prisma.leaveApplication.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            fullName: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    if (!leave) {
-      return errorResponse("Leave application not found.", 404);
-    }
-
-    // 4. Ensure application is still PENDING
-    if (leave.status !== "PENDING") {
+    if (!["APPROVED", "REJECTED"].includes(nextStatus)) {
       return errorResponse(
-        `Cannot update status. This application is already marked as ${leave.status}.`,
+        "Status must be APPROVED or REJECTED.",
         400
       );
     }
 
-    const balanceField = LEAVE_BALANCE_FIELDS[leave.leaveType];
-
-    // 5. Handle Approval or Rejection inside a transaction
-    const updatedApplication = await prisma.$transaction(async (tx) => {
-      if (nextStatus === "APPROVED") {
-        // Fetch current leave balance
-        const balance = await tx.leaveBalance.findUnique({
-          where: { userId: leave.userId },
+    const updated = await prisma.$transaction(
+      async (tx) => {
+        const leave = await tx.leaveApplication.findUnique({
+          where: { id },
+          include: {
+            allocations: true,
+            leaveType: true,
+          },
         });
 
-        if (!balance || balance[balanceField] < leave.totalDays) {
-          const available = balance ? balance[balanceField] : 0;
-          throw new Error(
-            `Cannot approve: Employee only has ${available} remaining days for ${leave.leaveType} leave, but applied for ${leave.totalDays} days.`
-          );
+        if (!leave) {
+          throw new Error("NOT_FOUND");
         }
 
-        // Deduct days from employee balance
-        await tx.leaveBalance.update({
-          where: { userId: leave.userId },
+        if (leave.status !== "PENDING") {
+          throw new Error("APPLICATION_ALREADY_PROCESSED");
+        }
+
+        if (leave.allocations.length === 0) {
+          throw new Error("MISSING_RESERVATIONS");
+        }
+
+        if (nextStatus === "APPROVED") {
+          await approveQuarterlyAllocation(tx, leave.allocations);
+        } else {
+          await releaseQuarterlyAllocation(tx, leave.allocations);
+        }
+
+        return tx.leaveApplication.update({
+          where: { id },
           data: {
-            [balanceField]: {
-              decrement: leave.totalDays,
+            status: nextStatus,
+            adminRemarks,
+          },
+          include: {
+            leaveType: true,
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
             },
           },
         });
-      }
-
-      // Update the leave status and admin remarks
-      return await tx.leaveApplication.update({
-        where: { id },
-        data: {
-          status: nextStatus,
-          adminRemarks: adminRemarks ? adminRemarks.trim() : null,
-        },
-      });
-    });
+      },
+      { isolationLevel: "Serializable" }
+    );
 
     return successResponse(
-      updatedApplication,
-      `Leave application has been ${nextStatus.toLowerCase()} successfully.`,
+      updated,
+      `Leave application ${nextStatus.toLowerCase()} successfully.`,
       200
     );
   } catch (error) {
-    console.error("Update Leave Status Error:", error);
-    const message = error.message.startsWith("Cannot approve:")
-      ? error.message
-      : "Internal server error updating leave status.";
-    return errorResponse(message, 400);
+    console.error("Admin Leave Status Error:", error);
+
+    if (error.message === "NOT_FOUND") {
+      return errorResponse("Leave application not found.", 404);
+    }
+
+    if (error.message === "APPLICATION_ALREADY_PROCESSED") {
+      return errorResponse(
+        "This application has already been processed.",
+        409
+      );
+    }
+
+    if (error.message === "MISSING_RESERVATIONS") {
+      return errorResponse(
+        "Cannot process this application because its quarterly reservations are missing.",
+        409
+      );
+    }
+
+    if (error.code === "P2034") {
+      return errorResponse(
+        "Concurrent update detected. Please try again.",
+        409
+      );
+    }
+
+    return errorResponse("Unable to update leave application.", 500);
   }
 }
-
