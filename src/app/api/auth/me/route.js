@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import { successResponse, errorResponse } from "@/lib/response";
 
-export const runtime = "nodejs";
 
 export async function GET(request) {
   try {

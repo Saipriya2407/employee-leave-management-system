@@ -8,7 +8,6 @@ import {
   releaseQuarterlyAllocation,
 } from "@/lib/quarterly-policy";
 
-export const runtime = "nodejs";
 
 export async function PATCH(request, { params }) {
   try {

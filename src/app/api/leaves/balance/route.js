@@ -10,7 +10,6 @@ import {
   calculateAvailableBalance,
 } from "@/lib/quarterly-policy";
 
-export const runtime = "nodejs";
 
 export async function GET(request) {
   try {
