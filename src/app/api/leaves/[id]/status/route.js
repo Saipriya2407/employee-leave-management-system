@@ -1,23 +1,42 @@
-
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
-import { successResponse, errorResponse } from "@/lib/response";
+import {
+  successResponse,
+  errorResponse,
+} from "@/lib/response";
 import {
   approveQuarterlyAllocation,
   releaseQuarterlyAllocation,
 } from "@/lib/quarterly-policy";
 
+export const runtime = "nodejs";
+
 export async function PATCH(request, { params }) {
   try {
+    // Only Admin can approve or reject leave.
     const auth = await requireAdmin(request);
-    if (!auth.authorized) return auth.response;
+
+    if (!auth.authorized) {
+      return auth.response;
+    }
 
     const { id } = await params;
+
+    if (!id) {
+      return errorResponse("Leave application ID is required.", 400);
+    }
+
     const body = await request.json().catch(() => null);
 
-    if (!body) return errorResponse("Invalid JSON request body.", 400);
+    if (!body) {
+      return errorResponse("Invalid JSON request body.", 400);
+    }
 
-    const nextStatus = body.status?.toUpperCase();
+    const nextStatus =
+      typeof body.status === "string"
+        ? body.status.toUpperCase()
+        : "";
+
     const adminRemarks =
       typeof body.adminRemarks === "string"
         ? body.adminRemarks.trim()
@@ -30,6 +49,7 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    // Update application and quarterly balances atomically.
     const updated = await prisma.$transaction(
       async (tx) => {
         const leave = await tx.leaveApplication.findUnique({
@@ -48,14 +68,22 @@ export async function PATCH(request, { params }) {
           throw new Error("APPLICATION_ALREADY_PROCESSED");
         }
 
-        if (leave.allocations.length === 0) {
+        if (!leave.allocations || leave.allocations.length === 0) {
           throw new Error("MISSING_RESERVATIONS");
         }
 
         if (nextStatus === "APPROVED") {
-          await approveQuarterlyAllocation(tx, leave.allocations);
+          // Convert reserved days into used days.
+          await approveQuarterlyAllocation(
+            tx,
+            leave.allocations
+          );
         } else {
-          await releaseQuarterlyAllocation(tx, leave.allocations);
+          // Release reserved days after rejection.
+          await releaseQuarterlyAllocation(
+            tx,
+            leave.allocations
+          );
         }
 
         return tx.leaveApplication.update({
@@ -76,7 +104,9 @@ export async function PATCH(request, { params }) {
           },
         });
       },
-      { isolationLevel: "Serializable" }
+      {
+        isolationLevel: "Serializable",
+      }
     );
 
     return successResponse(
@@ -84,11 +114,15 @@ export async function PATCH(request, { params }) {
       `Leave application ${nextStatus.toLowerCase()} successfully.`,
       200
     );
+
   } catch (error) {
     console.error("Admin Leave Status Error:", error);
 
     if (error.message === "NOT_FOUND") {
-      return errorResponse("Leave application not found.", 404);
+      return errorResponse(
+        "Leave application not found.",
+        404
+      );
     }
 
     if (error.message === "APPLICATION_ALREADY_PROCESSED") {
@@ -112,6 +146,9 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    return errorResponse("Unable to update leave application.", 500);
+    return errorResponse(
+      "Unable to update leave application.",
+      500
+    );
   }
 }

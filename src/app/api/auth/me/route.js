@@ -2,19 +2,18 @@ import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import { successResponse, errorResponse } from "@/lib/response";
 
-/**
- * GET /api/auth/me
- * Retrieves current authenticated user's profile and leave balance
- */
+export const runtime = "nodejs";
+
 export async function GET(request) {
   try {
-    // 1. Guard route: verify user is logged in
+    // Verify logged-in user
     const auth = await requireAuth(request);
+
     if (!auth.authorized) {
       return auth.response;
     }
 
-    // 2. Fetch full user record including leave balance
+    // Fetch user profile
     const user = await prisma.user.findUnique({
       where: { id: auth.user.id },
       select: {
@@ -24,13 +23,6 @@ export async function GET(request) {
         department: true,
         role: true,
         createdAt: true,
-        leaveBalance: {
-          select: {
-            casualLeave: true,
-            sickLeave: true,
-            earnedLeave: true,
-          },
-        },
       },
     });
 
@@ -38,10 +30,46 @@ export async function GET(request) {
       return errorResponse("User profile not found.", 404);
     }
 
-    return successResponse(user, "User profile retrieved successfully.", 200);
+    // Get current year and quarter
+    const now = new Date();
+    const year = now.getFullYear();
+    const quarter = Math.floor(now.getMonth() / 3) + 1;
+
+    // Fetch current-quarter leave balances
+    const leaveBalances = await prisma.quarterlyEntitlement.findMany({
+      where: {
+        userId: user.id,
+        year,
+        quarter,
+      },
+      include: {
+        leaveType: true,
+      },
+      orderBy: {
+        leaveType: {
+          name: "asc",
+        },
+      },
+    });
+
+    return successResponse(
+      {
+        user,
+        leaveBalances,
+        currentPeriod: {
+          year,
+          quarter,
+        },
+      },
+      "User profile retrieved successfully.",
+      200
+    );
   } catch (error) {
     console.error("Auth Me Error:", error);
-    return errorResponse("Internal server error fetching user profile.", 500);
+
+    return errorResponse(
+      "Unable to fetch user profile.",
+      500
+    );
   }
 }
-

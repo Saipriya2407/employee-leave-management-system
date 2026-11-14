@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-const COOKIE_NAME = "token";
+
+export const COOKIE_NAME = "token";
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -24,28 +25,16 @@ export async function comparePassword(password, hashedPassword) {
 }
 
 export function signToken(payload) {
-  return jwt.sign(
-    {
-      id: payload.id,
-      role: payload.role,
-      email: payload.email,
-    },
-    getJwtSecret(),
-    { expiresIn: JWT_EXPIRES_IN }
-  );
+  return jwt.sign(payload, getJwtSecret(), {
+    expiresIn: JWT_EXPIRES_IN,
+  });
 }
 
 export function verifyToken(token) {
   if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, getJwtSecret());
-
-    return {
-      id: decoded.id,
-      role: decoded.role,
-      email: decoded.email,
-    };
+    return jwt.verify(token, getJwtSecret());
   } catch {
     return null;
   }
@@ -53,55 +42,38 @@ export function verifyToken(token) {
 
 export async function getAuthUser(request) {
   try {
-    let token = null;
+    const cookieToken = request.cookies?.get(COOKIE_NAME)?.value;
 
-    if (request?.cookies?.get) {
-      token = request.cookies.get(COOKIE_NAME)?.value;
-    }
+    const headerToken = request.headers
+      .get("cookie")
+      ?.split(";")
+      .map((cookie) => cookie.trim())
+      .find((cookie) => cookie.startsWith(`${COOKIE_NAME}=`))
+      ?.substring(COOKIE_NAME.length + 1);
 
-    if (!token && request?.headers) {
-      const cookieHeader = request.headers.get("cookie");
-
-      if (cookieHeader) {
-        const cookie = cookieHeader
-          .split(";")
-          .map((item) => item.trim())
-          .find((item) => item.startsWith(`${COOKIE_NAME}=`));
-
-        if (cookie) {
-          token = decodeURIComponent(
-            cookie.substring(COOKIE_NAME.length + 1)
-          );
-        }
-      }
-    }
-
-    if (!token && request?.headers) {
-      const authorization = request.headers.get("authorization");
-
-      if (authorization?.startsWith("Bearer ")) {
-        token = authorization.substring(7);
-      }
-    }
+    const token = cookieToken || headerToken;
 
     if (!token) return null;
 
     const decoded = verifyToken(token);
-    if (!decoded) return null;
 
-    // Always confirm that the account still exists and its role is current.
-    const { default: prisma } = await import("@/lib/prisma");
+    if (
+      !decoded ||
+      typeof decoded !== "object" ||
+      !decoded.id ||
+      !decoded.email ||
+      !decoded.role
+    ) {
+      return null;
+    }
 
-    return await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-      },
-    });
+    return {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+    };
   } catch (error) {
-    console.error("Authentication Error:", error);
+    console.error("Authentication error:", error.message);
     return null;
   }
 }

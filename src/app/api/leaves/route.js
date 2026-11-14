@@ -1,7 +1,9 @@
-
 import prisma from "@/lib/prisma";
 import { requireEmployee, requireAuth } from "@/lib/permissions";
-import { successResponse, errorResponse } from "@/lib/response";
+import {
+  successResponse,
+  errorResponse,
+} from "@/lib/response";
 import {
   validateDateRange,
   isPastDate,
@@ -18,13 +20,20 @@ const VALID_STATUSES = [
   "CANCELLED",
 ];
 
+// POST: Apply for leave
 export async function POST(request) {
   try {
     const auth = await requireEmployee(request);
-    if (!auth.authorized) return auth.response;
+
+    if (!auth.authorized) {
+      return auth.response;
+    }
 
     const body = await request.json().catch(() => null);
-    if (!body) return errorResponse("Invalid JSON request body.", 400);
+
+    if (!body) {
+      return errorResponse("Invalid JSON request body.", 400);
+    }
 
     const { leaveType, startDate, endDate, reason } = body;
 
@@ -32,45 +41,77 @@ export async function POST(request) {
       return errorResponse("Leave type is required.", 400);
     }
 
-    if (!reason || typeof reason !== "string" || !reason.trim()) {
+    if (
+      !reason ||
+      typeof reason !== "string" ||
+      !reason.trim()
+    ) {
       return errorResponse("Reason is required.", 400);
     }
 
-    const dateCheck = validateDateRange(startDate, endDate, true);
+    // Validate leave dates
+    const dateCheck = validateDateRange(
+      startDate,
+      endDate,
+      true
+    );
+
     if (!dateCheck.isValid) {
       return errorResponse(dateCheck.error, 400);
     }
 
-    const { startDate: start, endDate: end, totalDays } = dateCheck;
+    const {
+      startDate: start,
+      endDate: end,
+      totalDays,
+    } = dateCheck;
 
     if (isPastDate(start)) {
-      return errorResponse("Leave start date cannot be in the past.", 400);
+      return errorResponse(
+        "Leave start date cannot be in the past.",
+        400
+      );
     }
 
+    // Find active leave type
     const code = leaveType.trim().toUpperCase();
 
     const typeRecord = await prisma.leaveType.findFirst({
       where: {
         code,
         isActive: true,
-        effectiveFrom: { lte: new Date() },
+        effectiveFrom: {
+          lte: new Date(),
+        },
       },
     });
 
     if (!typeRecord) {
-      return errorResponse("Selected leave type is invalid or inactive.", 400);
+      return errorResponse(
+        "Selected leave type is invalid or inactive.",
+        400
+      );
     }
 
+    // Split request across calendar quarters
     const segments = splitRequestByQuarters(start, end);
 
-    const overlappingLeave = await prisma.leaveApplication.findFirst({
-      where: {
-        userId: auth.user.id,
-        status: { in: ["PENDING", "APPROVED"] },
-        startDate: { lte: end },
-        endDate: { gte: start },
-      },
-    });
+    // Prevent overlapping pending or approved applications
+    const overlappingLeave =
+      await prisma.leaveApplication.findFirst({
+        where: {
+          userId: auth.user.id,
+          status: {
+            in: ["PENDING", "APPROVED"],
+          },
+          startDate: {
+            lte: end,
+          },
+          endDate: {
+            gte: start,
+          },
+        },
+      });
 
     if (overlappingLeave) {
       return errorResponse(
@@ -79,6 +120,7 @@ export async function POST(request) {
       );
     }
 
+    // Create application and reserve quarterly balance
     const newLeave = await prisma.$transaction(
       async (tx) => {
         const application = await tx.leaveApplication.create({
@@ -106,7 +148,9 @@ export async function POST(request) {
 
         return application;
       },
-      { isolationLevel: "Serializable" }
+      {
+        isolationLevel: "Serializable",
+      }
     );
 
     return successResponse(
@@ -114,14 +158,14 @@ export async function POST(request) {
       `Leave application submitted for ${totalDays} day(s). Status: PENDING.`,
       201
     );
+
   } catch (error) {
     console.error("Apply Leave Error:", error);
 
     if (
       error.message?.startsWith("Insufficient") ||
       error.message?.includes("future-quarter") ||
-      error.message?.includes("past quarter") ||
-      error.message?.includes("future-quarter")
+      error.message?.includes("past quarter")
     ) {
       return errorResponse(error.message, 400);
     }
@@ -134,39 +178,62 @@ export async function POST(request) {
     }
 
     return errorResponse(
-      error.message || "Unable to submit leave application.",
+      "Unable to submit leave application.",
       500
     );
   }
 }
 
+// GET: Retrieve leave applications
 export async function GET(request) {
   try {
     const auth = await requireAuth(request);
-    if (!auth.authorized) return auth.response;
+
+    if (!auth.authorized) {
+      return auth.response;
+    }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status")?.toUpperCase();
-    const leaveType = searchParams.get("leaveType")?.toUpperCase();
+
+    const status = searchParams
+      .get("status")
+      ?.toUpperCase();
+
+    const leaveType = searchParams
+      .get("leaveType")
+      ?.toUpperCase();
+
     const requestedUserId = searchParams.get("userId");
 
     const where = {};
 
+    // Employees can view only their own applications.
+    // Admins can view all applications or filter by employee.
     if (auth.user.role === "EMPLOYEE") {
       where.userId = auth.user.id;
     } else if (requestedUserId) {
       where.userId = requestedUserId;
     }
 
+    // Filter by leave status
     if (status) {
       if (!VALID_STATUSES.includes(status)) {
-        return errorResponse("Invalid leave status filter.", 400);
+        return errorResponse(
+          "Invalid leave status filter.",
+          400
+        );
       }
+
       where.status = status;
     }
 
+    // Filter by leave type
     if (leaveType) {
-      where.leaveType = { code: leaveType };
+      where.leaveType = {
+        is: {
+          code: leaveType,
+        },
+      };
     }
 
     const leaves = await prisma.leaveApplication.findMany({
@@ -185,7 +252,9 @@ export async function GET(request) {
           },
         },
       },
-      orderBy: { appliedAt: "desc" },
+      orderBy: {
+        appliedAt: "desc",
+      },
     });
 
     return successResponse(
@@ -193,8 +262,13 @@ export async function GET(request) {
       `Retrieved ${leaves.length} leave application(s).`,
       200
     );
+
   } catch (error) {
     console.error("List Leaves Error:", error);
-    return errorResponse("Unable to retrieve leave applications.", 500);
+
+    return errorResponse(
+      "Unable to retrieve leave applications.",
+      500
+    );
   }
 }

@@ -43,10 +43,7 @@ export async function POST(request) {
       return errorResponse("Invalid role.", 400);
     }
 
-    if (
-      typeof fullName !== "string" ||
-      !fullName.trim()
-    ) {
+    if (typeof fullName !== "string" || !fullName.trim()) {
       return errorResponse("Full name is required.", 400);
     }
 
@@ -62,10 +59,7 @@ export async function POST(request) {
       return errorResponse(passwordCheck.error, 400);
     }
 
-    if (
-      typeof department !== "string" ||
-      !department.trim()
-    ) {
+    if (typeof department !== "string" || !department.trim()) {
       return errorResponse("Department is required.", 400);
     }
 
@@ -90,14 +84,26 @@ export async function POST(request) {
         select: { id: true },
       });
 
-      // First Admin can register without authentication.
-      // Later Admin registrations require an existing Admin.
-      if (adminExists) {
+      if (!adminExists) {
+        // First Admin must provide the secret registration code.
+        const secretCode = body.adminCode;
+
+        if (
+          !process.env.ADMIN_REGISTRATION_CODE ||
+          secretCode !== process.env.ADMIN_REGISTRATION_CODE
+        ) {
+          return errorResponse(
+            "Invalid Admin registration code.",
+            403
+          );
+        }
+      } else {
+        // Later Admin registrations require an existing Admin.
         const auth = await requireAuth(request);
 
         if (!auth.authorized || auth.user.role !== "ADMIN") {
           return errorResponse(
-            "Only an existing admin can register another admin.",
+            "Only an existing Admin can register another Admin.",
             403
           );
         }
@@ -140,7 +146,6 @@ export async function POST(request) {
       `${requestedRole} registered successfully.`,
       201
     );
-
   } catch (error) {
     console.error("Register Error:", error);
 

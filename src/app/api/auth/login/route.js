@@ -1,65 +1,52 @@
 import prisma from "@/lib/prisma";
 import { comparePassword, signToken } from "@/lib/auth";
-import { successResponse, errorResponse, methodNotAllowedResponse } from "@/lib/response";
+import {
+  successResponse,
+  errorResponse,
+  methodNotAllowedResponse,
+} from "@/lib/response";
 import { validateEmail } from "@/lib/validation";
 
 export async function GET() {
-  return methodNotAllowedResponse(
-    ["POST"],
-    "HTTP 405 Method Not Allowed: /api/auth/login requires a POST request with JSON body { email, password }. Browsers perform GET requests by default when opening URLs in the address bar."
-  );
+  return methodNotAllowedResponse(["POST"], "Login requires POST method.");
 }
 
-/**
- * POST /api/auth/login
- * Authenticates user credentials, sets an HttpOnly cookie, and returns user details
- */
 export async function POST(request) {
   try {
-    const body = await request.json().catch(() => null);
-
-    if (!body) {
-      return errorResponse("Invalid JSON request body.", 400);
-    }
-
+    const body = await request.json();
     const { email, password } = body;
 
-    // 1. Validate email input
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      return errorResponse("Invalid email address.", 400);
+    if (!email || !password) {
+      return errorResponse("Email and password are required.", 400);
     }
 
-    // 2. Validate password input
-    if (!password || typeof password !== "string") {
-      return errorResponse("Password is required.", 400);
+    if (!validateEmail(email)) {
+      return errorResponse("Please enter a valid email address.", 400);
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // 3. Find user by email
     const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+      where: { email: email.toLowerCase().trim() },
     });
 
     if (!user) {
       return errorResponse("Invalid email or password.", 401);
     }
 
-    // 4. Compare passwords using bcryptjs
-    const isPasswordValid = await comparePassword(password, user.password);
+    const isPasswordValid = await comparePassword(
+      password,
+      user.password
+    );
+
     if (!isPasswordValid) {
       return errorResponse("Invalid email or password.", 401);
     }
 
-    // 5. Generate signed JWT token
     const token = signToken({
       id: user.id,
-      role: user.role,
       email: user.email,
+      role: user.role,
     });
 
-    // 6. Build sanitized user object
     const sanitizedUser = {
       id: user.id,
       fullName: user.fullName,
@@ -68,40 +55,22 @@ export async function POST(request) {
       role: user.role,
     };
 
-    // 7. Prepare response and set HttpOnly Cookie
     const response = successResponse(
-      { user: sanitizedUser, token },
+      { user: sanitizedUser },
       "Logged in successfully.",
       200
     );
 
-    // Set secure HttpOnly cookie (7 days expiry)
-    const isProduction = process.env.NODE_ENV === "production";
-    const maxAge = 7 * 24 * 60 * 60; // 7 days in seconds
-    const cookieOptions = [
-      `token=${token}`,
-      "HttpOnly",
-      "Path=/",
-      `Max-Age=${maxAge}`,
-      "SameSite=Lax",
-    ];
+    const maxAge = 7 * 24 * 60 * 60;
 
-    if (isProduction) {
-      cookieOptions.push("Secure");
-    }
-
-    response.headers.set("Set-Cookie", cookieOptions.join("; "));
+    response.headers.set(
+      "Set-Cookie",
+      `token=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=None; Secure`
+    );
 
     return response;
   } catch (error) {
-    console.error("Login Error:", error);
-    if (error?.code === "ECONNREFUSED" || error?.message?.includes("connect") || error?.name === "PrismaClientKnownRequestError") {
-      return errorResponse(
-        "Database Connection Failed: Unable to connect to PostgreSQL at localhost:5432. Please ensure PostgreSQL is running or update DATABASE_URL in .env.",
-        503
-      );
-    }
-    return errorResponse("Internal server error during login.", 500);
+    console.error("Login error:", error);
+    return errorResponse("Unable to login. Please try again.", 500);
   }
 }
-
