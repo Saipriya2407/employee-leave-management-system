@@ -99,6 +99,8 @@ export async function GET(request) {
       },
       {
         isolationLevel: "Serializable",
+        maxWait: 10000,
+        timeout: 20000,
       }
     );
 
