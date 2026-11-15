@@ -1,3 +1,4 @@
+
 import prisma from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { requireAuth } from "@/lib/permissions";
@@ -27,6 +28,84 @@ const DEFAULT_LEAVE_TYPES = [
     carryForwardAllowed: false,
   },
 ];
+
+// Create the counter and assign codes to existing users without codes.
+async function prepareRoleCounter(tx, role) {
+  await tx.employeeCodeCounter.upsert({
+    where: { role },
+    update: {},
+    create: { role, value: 0 },
+  });
+
+  const existingCodes = await tx.user.findMany({
+    where: {
+      role,
+      employeeCode: { not: null },
+    },
+    select: { employeeCode: true },
+  });
+
+  let maxNumber = 0;
+
+  for (const item of existingCodes) {
+    const prefix = role === "ADMIN" ? "ADM" : "EMP";
+    const match = item.employeeCode?.match(
+      new RegExp(`^${prefix}(\\d+)$`)
+    );
+
+    if (match) {
+      maxNumber = Math.max(maxNumber, Number(match[1]));
+    }
+  }
+
+  const counter = await tx.employeeCodeCounter.findUnique({
+    where: { role },
+  });
+
+  if (counter.value < maxNumber) {
+    await tx.employeeCodeCounter.update({
+      where: { role },
+      data: { value: maxNumber },
+    });
+  }
+
+  const usersWithoutCodes = await tx.user.findMany({
+    where: {
+      role,
+      employeeCode: null,
+    },
+    select: { id: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+
+  for (const user of usersWithoutCodes) {
+    const updatedCounter = await tx.employeeCodeCounter.update({
+      where: { role },
+      data: { value: { increment: 1 } },
+    });
+
+    const prefix = role === "ADMIN" ? "ADM" : "EMP";
+    const employeeCode =
+      `${prefix}${String(updatedCounter.value).padStart(3, "0")}`;
+
+    await tx.user.update({
+      where: { id: user.id },
+      data: { employeeCode },
+    });
+  }
+}
+
+// Generate the next code for a new user.
+async function generateEmployeeCode(tx, role) {
+  const updatedCounter = await tx.employeeCodeCounter.update({
+    where: { role },
+    data: { value: { increment: 1 } },
+  });
+
+  const prefix = role === "ADMIN" ? "ADM" : "EMP";
+
+  return `${prefix}${String(updatedCounter.value).padStart(3, "0")}`;
+}
 
 export async function POST(request) {
   try {
@@ -65,7 +144,6 @@ export async function POST(request) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check whether the email already exists.
     const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -85,7 +163,6 @@ export async function POST(request) {
       });
 
       if (!adminExists) {
-        // First Admin must provide the secret registration code.
         const secretCode = body.adminCode;
 
         if (
@@ -98,7 +175,6 @@ export async function POST(request) {
           );
         }
       } else {
-        // Later Admin registrations require an existing Admin.
         const auth = await requireAuth(request);
 
         if (!auth.authorized || auth.user.role !== "ADMIN") {
@@ -112,34 +188,53 @@ export async function POST(request) {
 
     const hashedPassword = await hashPassword(password);
 
-    const user = await prisma.$transaction(async (tx) => {
-      // Create default leave types if they do not exist.
-      for (const type of DEFAULT_LEAVE_TYPES) {
-        await tx.leaveType.upsert({
-          where: { code: type.code },
-          update: {},
-          create: type,
-        });
-      }
+    const user = await prisma.$transaction(
+      async (tx) => {
+        // Create default leave types if they do not exist.
+        for (const type of DEFAULT_LEAVE_TYPES) {
+          await tx.leaveType.upsert({
+            where: { code: type.code },
+            update: {},
+            create: type,
+          });
+        }
 
-      return tx.user.create({
-        data: {
-          fullName: fullName.trim(),
-          email: normalizedEmail,
-          password: hashedPassword,
-          department: department.trim(),
-          role: requestedRole,
-        },
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          department: true,
-          role: true,
-          createdAt: true,
-        },
-      });
-    });
+        // Assign codes to existing users in both roles.
+        await prepareRoleCounter(tx, "EMPLOYEE");
+        await prepareRoleCounter(tx, "ADMIN");
+
+        // Generate the new user's code.
+        const employeeCode = await generateEmployeeCode(
+          tx,
+          requestedRole
+        );
+
+        return tx.user.create({
+          data: {
+            employeeCode,
+            fullName: fullName.trim(),
+            email: normalizedEmail,
+            password: hashedPassword,
+            department: department.trim(),
+            role: requestedRole,
+          },
+          select: {
+            id: true,
+            employeeCode: true,
+            fullName: true,
+            email: true,
+            department: true,
+            role: true,
+            createdAt: true,
+          },
+        });
+      },
+      {
+        isolationLevel: "Serializable",
+        maxWait: 10000,
+        timeout: 20000,
+      }
+    );
 
     return successResponse(
       user,
@@ -151,7 +246,14 @@ export async function POST(request) {
 
     if (error.code === "P2002") {
       return errorResponse(
-        "An account with this email already exists.",
+        "An account or employee code already exists. Please try again.",
+        409
+      );
+    }
+
+    if (error.code === "P2034") {
+      return errorResponse(
+        "Registration conflict. Please try again.",
         409
       );
     }
