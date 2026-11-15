@@ -113,6 +113,19 @@ model LeaveRequestAllocation {
 
   @@map("employee_code_counters")
 }
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
 enum UserRole {
   EMPLOYEE
   ADMIN
