@@ -240,13 +240,14 @@ export async function GET(request) {
     const leaves = await prisma.leaveApplication.findMany({
       where,
       include: {
-        // Employee details added for Admin dashboard
+        // Employee details for Admin Leave Applications
         user: {
           select: {
             id: true,
             fullName: true,
             email: true,
             employeeCode: true,
+            department: true,
           },
         },
 
