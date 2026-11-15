@@ -17,6 +17,7 @@ export async function GET(request) {
       where: { id: auth.user.id },
       select: {
         id: true,
+        employeeCode: true,
         fullName: true,
         email: true,
         department: true,
