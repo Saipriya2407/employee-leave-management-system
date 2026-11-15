@@ -107,7 +107,12 @@ model LeaveRequestAllocation {
   @@index([quarterlyEntitlementId])
   @@map("leave_request_allocations")
 }
+  model EmployeeCodeCounter {
+  role  UserRole @id
+  value Int      @default(0)
 
+  @@map("employee_code_counters")
+}
 enum UserRole {
   EMPLOYEE
   ADMIN
