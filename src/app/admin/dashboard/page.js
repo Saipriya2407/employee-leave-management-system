@@ -35,7 +35,7 @@ export default function AdminDashboard() {
         // Fetch employees and leave applications
         const [employeesResponse, leavesResponse] =
           await Promise.all([
-            fetch("/api/admin/employees", {
+            fetch("/api/backend/admin/employees", {
               headers: {
                 Authorization: `Bearer ${token}`,
               },

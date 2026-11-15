@@ -39,7 +39,7 @@ export default function ApplyLeavePage() {
         setLoading(true);
         setMessage("");
 
-        const response = await fetch("/api/leave-types", {
+        const response = await fetch("/api/backend/leave-types", {
           method: "GET",
           credentials: "include",
         });
@@ -52,17 +52,23 @@ export default function ApplyLeavePage() {
           );
         }
 
-        const types = Array.isArray(data.leaveTypes)
-          ? data.leaveTypes
-          : Array.isArray(data.leave_types)
-          ? data.leave_types
-          : [];
+       const types = Array.isArray(data.data?.leaveTypes)
+  ? data.data.leaveTypes
+  : Array.isArray(data.leaveTypes)
+  ? data.leaveTypes
+  : Array.isArray(data.data)
+  ? data.data
+  : [];
 
-        setLeaveTypes(types.filter((type) => type.active !== false));
+setLeaveTypes(
+  types.filter(
+    (type) => type.isActive !== false && type.active !== false
+  )
+);
 
         // Load employee leave balance
         const balanceResponse = await fetch(
-          "/api/leaves/balance",
+          "/api/backend/leaves/balance",
           {
             method: "GET",
             credentials: "include",
@@ -275,7 +281,7 @@ export default function ApplyLeavePage() {
     try {
       setSubmitting(true);
 
-      const response = await fetch("/api/leaves", {
+      const response = await fetch("/api/backend/leaves", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -312,7 +318,7 @@ export default function ApplyLeavePage() {
 
       // Refresh balance after submission
       const balanceResponse = await fetch(
-        "/api/leaves/balance",
+        "/api/backend/leaves/balance",
         {
           credentials: "include",
         }
@@ -443,7 +449,7 @@ export default function ApplyLeavePage() {
               </p>
 
               <p className="mt-1 font-bold">
-                12 / Year
+                3/ Quarter
               </p>
             </div>
 
@@ -453,7 +459,7 @@ export default function ApplyLeavePage() {
               </p>
 
               <p className="mt-1 font-bold">
-                12 / Year
+                3/ Quarter
               </p>
             </div>
 
@@ -463,7 +469,7 @@ export default function ApplyLeavePage() {
               </p>
 
               <p className="mt-1 font-bold">
-                12 / Year
+                3 / Quarter
               </p>
             </div>
 

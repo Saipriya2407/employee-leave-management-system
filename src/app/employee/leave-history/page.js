@@ -17,7 +17,7 @@ export default function LeaveHistoryPage() {
       setLoading(true);
       setError("");
 
-      const response = await fetch("/api/leaves", {
+      const response = await fetch("/api/backend/leaves", {
         method: "GET",
         credentials: "include",
       });
@@ -61,7 +61,7 @@ export default function LeaveHistoryPage() {
       setError("");
       setCancellingId(id);
 
-      const response = await fetch(`/api/leaves/${id}/cancel`, {
+      const response = await fetch("/api/backend/leaves/${id}/cancel", {
         method: "PATCH",
         credentials: "include",
       });

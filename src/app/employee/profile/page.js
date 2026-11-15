@@ -14,7 +14,7 @@ export default function EmployeeProfilePage() {
       setLoading(true);
       setMessage("");
 
-      const response = await fetch("/api/auth/me", {
+      const response = await fetch("/api/backend/auth/me", {
         method: "GET",
         credentials: "include",
       });
@@ -29,7 +29,13 @@ export default function EmployeeProfilePage() {
         );
       }
 
-      setUser(data.user || data.employee || data);
+const profileUser = data.data?.user || data.user || data.employee;
+
+if (!profileUser) {
+  throw new Error("Employee details were not returned by the server.");
+}
+
+setUser(profileUser);
     } catch (error) {
       setMessage(
         error.message || "Unable to connect to server"
@@ -83,12 +89,12 @@ export default function EmployeeProfilePage() {
         },
         {
           label: "Department",
-          value: getValue(
-            user.department?.name,
-            user.departmentName,
-            user.department_name,
-            user.department
-          ),
+         value: getValue(
+         user.employeeCode,
+         user.employeeId,
+         user.employee_id
+),
+        
           icon: "🏢",
         },
         {

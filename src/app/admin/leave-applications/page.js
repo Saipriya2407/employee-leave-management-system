@@ -26,7 +26,7 @@ export default function AdminLeaveApplications() {
           throw new Error("Please login as admin.");
         }
 
-        const response = await fetch("/api/admin/leaves", {
+        const response = await fetch("/api/backend/admin/leaves", {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -213,7 +213,7 @@ export default function AdminLeaveApplications() {
       setError("");
 
       const response = await fetch(
-        `/api/admin/leaves/${leaveId}`,
+        "/api/admin/leaves/${leaveId}",
         {
           method: "PATCH",
           headers: {

@@ -400,7 +400,7 @@ export default function AdminEmployees() {
           throw new Error("Please login as admin.");
         }
 
-        const response = await fetch("/api/admin/employees", {
+        const response = await fetch("/api/backend/admin/employees", {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,

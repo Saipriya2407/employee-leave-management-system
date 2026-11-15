@@ -4,17 +4,17 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export default function EmployeeDashboard() {
   const [employee, setEmployee] = useState(null);
   const [balances, setBalances] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [currentYear, setCurrentYear] = useState(null);
+  const [currentQuarter, setCurrentQuarter] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentQuarter = Math.floor(today.getMonth() / 3) + 1;
 
   // Fetch all employee dashboard data
   const fetchDashboardData = useCallback(async () => {
@@ -22,30 +22,42 @@ export default function EmployeeDashboard() {
       setLoading(true);
       setError("");
 
-      // 1. Fetch logged-in employee profile
-      const profileResponse = await fetch("/api/auth/me", {
-        method: "GET",
-        credentials: "include",
-      });
+      if (!API_URL) {
+        throw new Error("Backend API URL is not configured.");
+      }
 
+      // 1. Fetch employee profile
+      const profileResponse = await 
+      //   `${API_URL}/api/auth/me`,
+      //   {
+      //     method: "GET",
+      //     credentials: "include",
+      //   }
+      // );
+                 fetch("/api/backend/auth/me", {
+                 credentials: "include",
+                 cache: "no-store",
+            });
       const profileData = await profileResponse.json();
 
-      if (!profileResponse.ok) {
+      if (!profileResponse.ok || !profileData.success) {
         throw new Error(
-          profileData.message || "Unable to fetch employee profile."
+          profileData.message ||
+          "Unable to fetch employee profile."
         );
       }
 
-      const employeeData =
-        profileData.employee ||
-        profileData.user ||
-        profileData;
+      const employeeData = profileData.data?.user;
+
+      if (!employeeData) {
+        throw new Error("Employee information not found.");
+      }
 
       setEmployee(employeeData);
 
-      // 2. Fetch employee leave balances
+      // 2. Fetch leave balances
       const balanceResponse = await fetch(
-        "/api/leaves/balance",
+        "/api/backend/leaves/balance",
         {
           method: "GET",
           credentials: "include",
@@ -54,27 +66,27 @@ export default function EmployeeDashboard() {
 
       const balanceData = await balanceResponse.json();
 
-      if (!balanceResponse.ok) {
+      if (!balanceResponse.ok || !balanceData.success) {
         throw new Error(
-          balanceData.message || "Unable to fetch leave balances."
+          balanceData.message ||
+          "Unable to fetch leave balances."
         );
       }
 
-      const employeeBalances =
-        balanceData.balances ||
-        balanceData.leaveBalances ||
-        balanceData.leaves ||
-        [];
+      const balanceResult = balanceData.data;
 
       setBalances(
-        Array.isArray(employeeBalances)
-          ? employeeBalances
+        Array.isArray(balanceResult?.balances)
+          ? balanceResult.balances
           : []
       );
 
-      // 3. Fetch employee leave history
+      setCurrentYear(balanceResult?.year ?? null);
+      setCurrentQuarter(balanceResult?.quarter ?? null);
+
+      // 3. Fetch leave history
       const historyResponse = await fetch(
-        "/api/leaves",
+        "/api/backend/leaves",
         {
           method: "GET",
           credentials: "include",
@@ -83,21 +95,16 @@ export default function EmployeeDashboard() {
 
       const historyData = await historyResponse.json();
 
-      if (!historyResponse.ok) {
+      if (!historyResponse.ok || !historyData.success) {
         throw new Error(
-          historyData.message || "Unable to fetch leave history."
+          historyData.message ||
+          "Unable to fetch leave history."
         );
       }
 
-      const employeeRequests =
-        historyData.leaves ||
-        historyData.requests ||
-        historyData.applications ||
-        [];
-
       setRequests(
-        Array.isArray(employeeRequests)
-          ? employeeRequests
+        Array.isArray(historyData.data)
+          ? historyData.data
           : []
       );
 
@@ -117,12 +124,12 @@ export default function EmployeeDashboard() {
   // Logout
   async function handleLogout() {
     try {
-      await fetch("/api/auth/logout", {
+      await fetch("/api/backend/auth/logout", {
         method: "POST",
         credentials: "include",
       });
-    } catch (error) {
-      console.error("Logout request failed:", error);
+    } catch (err) {
+      console.error("Logout request failed:", err);
     } finally {
       window.location.href = "/login";
     }
@@ -151,7 +158,6 @@ export default function EmployeeDashboard() {
       leave.name ||
       leave.leaveType?.name ||
       leave.leaveTypeName ||
-      leave.leaveType ||
       leave.type ||
       "Leave"
     );
@@ -160,6 +166,7 @@ export default function EmployeeDashboard() {
   // Get available balance
   function getAvailable(leave) {
     return Number(
+      leave.availableDays ??
       leave.available ??
       leave.remaining ??
       leave.balance ??
@@ -167,9 +174,10 @@ export default function EmployeeDashboard() {
     );
   }
 
-  // Get total annual allocation
+  // Get annual allocation
   function getAnnualTotal(leave) {
     return Number(
+      leave.annualQuota ??
       leave.annualAllocation ??
       leave.annualTotal ??
       leave.total ??
@@ -180,51 +188,40 @@ export default function EmployeeDashboard() {
   // Get used leave
   function getUsed(leave) {
     return Number(
-      leave.used ??
       leave.usedDays ??
+      leave.used ??
       0
     );
   }
 
   // Get current quarter allocation
   function getQuarterAllocation(leave) {
-    const quarterAllocations =
-      leave.quarterAllocations ||
-      leave.quarters ||
-      {};
-
-    const quarterValue =
-      quarterAllocations[`Q${currentQuarter}`] ??
-      quarterAllocations[currentQuarter] ??
+    return Number(
+      leave.quarterlyQuota ??
+      leave.quarterAllocation ??
       leave.currentQuarterAllocation ??
       leave.quarterlyAllocation ??
-      0;
-
-    if (typeof quarterValue === "object") {
-      return Number(
-        quarterValue.allocated ??
-        quarterValue.total ??
-        quarterValue.allocation ??
-        0
-      );
-    }
-
-    return Number(quarterValue);
-  }
-
-  // Get carry forward
-  function getCarryForward(leave) {
-    return Number(
-      leave.carryForward ??
-      leave.carriedForward ??
-      leave.carryForwardDays ??
       0
     );
   }
 
+  // Get carry-forward balance
+ function getCarryForward(leave) {
+  return Number(
+    leave.carryForwardDays ??
+    leave.carryForward ??
+    leave.carriedForward ??
+    leave.carryInDays ??
+    leave.carryIn ??
+    0
+  );
+}
+
   // Get status class
   function getStatusClass(status) {
-    const normalizedStatus = String(status || "PENDING").toUpperCase();
+    const normalizedStatus = String(
+      status || "PENDING"
+    ).toUpperCase();
 
     if (normalizedStatus === "APPROVED") {
       return "bg-green-100 text-green-700";
@@ -387,7 +384,6 @@ export default function EmployeeDashboard() {
             </button>
 
           </nav>
-
         </div>
       </header>
 
@@ -409,7 +405,6 @@ export default function EmployeeDashboard() {
           </p>
 
           <div className="mt-5 flex flex-wrap gap-4 text-sm">
-
             <span>
               Employee ID: {employee.employeeId || employee.id || "-"}
             </span>
@@ -417,7 +412,6 @@ export default function EmployeeDashboard() {
             <span>
               Department: {employee.department || "-"}
             </span>
-
           </div>
 
         </section>
@@ -438,19 +432,18 @@ export default function EmployeeDashboard() {
             </div>
 
             <div className="rounded-lg bg-white px-5 py-3">
-
               <p className="text-xs font-medium text-gray-500">
                 Current Quarter
               </p>
 
               <p className="text-2xl font-bold text-blue-700">
-                Q{currentQuarter} - {currentYear}
+                {currentQuarter && currentYear
+                  ? `Q${currentQuarter} - ${currentYear}`
+                  : "Not available"}
               </p>
-
             </div>
 
           </div>
-
         </section>
 
         {/* Statistics */}
@@ -466,7 +459,6 @@ export default function EmployeeDashboard() {
               <p className="text-sm text-gray-500">
                 Total Applications
               </p>
-
               <p className="mt-2 text-3xl font-bold">
                 {totalApplications}
               </p>
@@ -476,7 +468,6 @@ export default function EmployeeDashboard() {
               <p className="text-sm text-gray-500">
                 Pending
               </p>
-
               <p className="mt-2 text-3xl font-bold text-yellow-600">
                 {pendingApplications}
               </p>
@@ -486,7 +477,6 @@ export default function EmployeeDashboard() {
               <p className="text-sm text-gray-500">
                 Approved
               </p>
-
               <p className="mt-2 text-3xl font-bold text-green-600">
                 {approvedApplications}
               </p>
@@ -496,14 +486,12 @@ export default function EmployeeDashboard() {
               <p className="text-sm text-gray-500">
                 Rejected
               </p>
-
               <p className="mt-2 text-3xl font-bold text-red-600">
                 {rejectedApplications}
               </p>
             </div>
 
           </div>
-
         </section>
 
         {/* Leave Balances */}
@@ -555,8 +543,8 @@ export default function EmployeeDashboard() {
 
                   <div
                     key={
-                      leave.id ||
                       leave.leaveTypeId ||
+                      leave.id ||
                       leave.code ||
                       index
                     }
@@ -599,26 +587,20 @@ export default function EmployeeDashboard() {
                     <div className="mt-5">
 
                       <div className="mb-2 flex justify-between text-xs text-gray-500">
-
-                        <span>
-                          Annual usage
-                        </span>
+                        <span>Annual usage</span>
 
                         <span>
                           {used} / {total} days
                         </span>
-
                       </div>
 
                       <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-
                         <div
                           className="h-full rounded-full bg-blue-600 transition-all"
                           style={{
                             width: `${progress}%`,
                           }}
                         />
-
                       </div>
 
                     </div>
@@ -626,7 +608,6 @@ export default function EmployeeDashboard() {
                     <div className="mt-5 grid grid-cols-2 gap-3">
 
                       <div className="rounded-lg bg-gray-50 p-3">
-
                         <p className="text-xs text-gray-500">
                           Current Quarter
                         </p>
@@ -634,27 +615,33 @@ export default function EmployeeDashboard() {
                         <p className="mt-1 font-bold">
                           {quarterAllocation} days
                         </p>
-
                       </div>
 
-                      <div className="rounded-lg bg-green-50 p-3">
-
-                        <p className="text-xs text-green-700">
-                          Sick Leave Carry Forward
-                        </p>
-
-                        <p className="mt-1 font-bold text-green-800">
-                          {carryForward} days
-                        </p>
-
-                      </div>
-
+                    {String(
+  leave.code || leave.leaveType?.code || ""
+).toUpperCase() === "SICK" ? (
+  <div className="rounded-lg bg-green-50 p-3">
+    <p className="text-xs text-green-700">
+      Sick Leave Carry Forward
+    </p>
+    <p className="mt-1 font-bold text-green-800">
+      {carryForward} days
+    </p>
+  </div>
+) : (
+  <div className="rounded-lg bg-gray-50 p-3">
+    <p className="text-xs text-gray-500">
+      Carry Forward
+    </p>
+    <p className="mt-1 font-bold text-gray-700">
+      Not applicable
+    </p>
+  </div>
+)}
                     </div>
 
                   </div>
-
                 );
-
               })}
 
             </div>
@@ -662,7 +649,6 @@ export default function EmployeeDashboard() {
           ) : (
 
             <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-
               <h3 className="font-semibold">
                 No leave balances available
               </h3>
@@ -670,7 +656,6 @@ export default function EmployeeDashboard() {
               <p className="mt-2 text-sm text-gray-500">
                 Your leave balance will appear here once it is available.
               </p>
-
             </div>
 
           )}
@@ -690,7 +675,6 @@ export default function EmployeeDashboard() {
               href="/employee/apply-leave"
               className="rounded-xl border border-gray-200 bg-white p-5 transition hover:border-blue-300 hover:shadow-sm"
             >
-
               <h3 className="font-bold text-blue-800">
                 Apply Leave
               </h3>
@@ -698,14 +682,12 @@ export default function EmployeeDashboard() {
               <p className="mt-2 text-sm text-gray-500">
                 Submit a new leave application.
               </p>
-
             </Link>
 
             <Link
               href="/employee/leave-history"
               className="rounded-xl border border-gray-200 bg-white p-5 transition hover:border-blue-300 hover:shadow-sm"
             >
-
               <h3 className="font-bold text-blue-800">
                 My Leave History
               </h3>
@@ -713,14 +695,12 @@ export default function EmployeeDashboard() {
               <p className="mt-2 text-sm text-gray-500">
                 View your applications and their status.
               </p>
-
             </Link>
 
             <Link
               href="/employee/profile"
               className="rounded-xl border border-gray-200 bg-white p-5 transition hover:border-blue-300 hover:shadow-sm"
             >
-
               <h3 className="font-bold text-blue-800">
                 My Profile
               </h3>
@@ -728,11 +708,9 @@ export default function EmployeeDashboard() {
               <p className="mt-2 text-sm text-gray-500">
                 View your employee information.
               </p>
-
             </Link>
 
           </div>
-
         </section>
 
         {/* Recent Leave Requests */}
@@ -766,9 +744,7 @@ export default function EmployeeDashboard() {
               <table className="w-full min-w-[650px] text-left text-sm">
 
                 <thead className="border-b border-gray-200 bg-gray-50">
-
                   <tr>
-
                     <th className="px-5 py-4 font-semibold">
                       Leave Type
                     </th>
@@ -784,9 +760,7 @@ export default function EmployeeDashboard() {
                     <th className="px-5 py-4 font-semibold">
                       Status
                     </th>
-
                   </tr>
-
                 </thead>
 
                 <tbody>
@@ -803,22 +777,14 @@ export default function EmployeeDashboard() {
                       </td>
 
                       <td className="px-5 py-4 text-gray-600">
-                        {formatDate(
-                          request.startDate ||
-                          request.fromDate ||
-                          request.from_date
-                        )}
+                        {formatDate(request.startDate)}
                       </td>
 
                       <td className="px-5 py-4 text-gray-600">
-                        {request.days ??
-                          request.totalDays ??
-                          request.numberOfDays ??
-                          0}
+                        {request.totalDays ?? 0}
                       </td>
 
                       <td className="px-5 py-4">
-
                         <span
                           className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${getStatusClass(
                             request.status
@@ -826,17 +792,13 @@ export default function EmployeeDashboard() {
                         >
                           {request.status || "PENDING"}
                         </span>
-
                       </td>
 
                     </tr>
-
                   ))}
 
                 </tbody>
-
               </table>
-
             </div>
 
           ) : (
@@ -859,7 +821,6 @@ export default function EmployeeDashboard() {
               </Link>
 
             </div>
-
           )}
 
         </section>
@@ -868,9 +829,7 @@ export default function EmployeeDashboard() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white px-5 py-5 text-center text-sm text-gray-500">
-
         Employee Leave Management System
-
       </footer>
 
     </main>

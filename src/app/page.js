@@ -25,24 +25,19 @@ export default function HomePage() {
       <header className="w-full bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
 
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-700 text-2xl font-bold text-white">
               E
             </div>
 
             <div>
-              <h1 className="text-xl font-bold text-blue-900">
-                ELMS
-              </h1>
-
+              <h1 className="text-xl font-bold text-blue-900">ELMS</h1>
               <p className="text-sm text-black">
                 Employee Leave Management System
               </p>
             </div>
           </Link>
 
-          {/* Navigation */}
           <nav className="flex items-center gap-5">
             <Link
               href="/"
@@ -58,18 +53,17 @@ export default function HomePage() {
               Login
             </Link>
           </nav>
+
         </div>
       </header>
 
       {/* Hero Section */}
       <section className="relative flex min-h-[650px] w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-950 via-blue-800 to-blue-600 px-5 py-16 text-white">
 
-        {/* Background Decoration */}
         <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-blue-400 opacity-10 blur-3xl" />
 
         <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-white opacity-10 blur-3xl" />
 
-        {/* Main Content */}
         <div className="relative z-10 mx-auto max-w-5xl text-center">
 
           {/* Logo */}
@@ -92,26 +86,19 @@ export default function HomePage() {
             balances with a simple and efficient management system.
           </p>
 
-          {/* Registration Buttons */}
+          {/* Single Registration Button */}
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
 
-            {/* Employee Registration */}
-           <Link href="/employee/registration"
-              className="rounded-xl bg-white px-8 py-4 text-center font-semibold text-blue-800 shadow-lg transition hover:-translate-y-1 hover:bg-blue-50"
+            <Link
+              href="/registration"
+              className="rounded-xl bg-white px-10 py-4 text-center font-semibold text-blue-800 shadow-lg transition hover:-translate-y-1 hover:bg-blue-50"
             >
-              Employee Registration
-            </Link>
-
-            {/* Admin Registration */}
-           <Link href="/admin/registration"
-              className="rounded-xl border border-white/50 bg-white/10 px-8 py-4 text-center font-semibold text-white backdrop-blur-sm transition hover:-translate-y-1 hover:bg-white/20"
-            >
-              Admin Registration
+              Register Now
             </Link>
 
           </div>
 
-          {/* Explore Features Button */}
+          {/* Explore Features */}
           <div className="mt-16">
             <button
               type="button"
@@ -138,9 +125,7 @@ export default function HomePage() {
           className="mx-auto max-w-7xl scroll-mt-6 px-5 py-16 sm:px-8"
         >
 
-          {/* Heading */}
           <div className="mb-12 text-center">
-
             <p className="text-sm font-bold uppercase tracking-widest text-blue-700">
               Our Services
             </p>
@@ -152,15 +137,12 @@ export default function HomePage() {
             <p className="mt-4 text-gray-500">
               A simple platform for managing employee leave and attendance requests.
             </p>
-
           </div>
 
-          {/* Feature Cards */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 
             {/* Employee Management */}
             <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 text-2xl">
                 👥
               </div>
@@ -173,12 +155,10 @@ export default function HomePage() {
                 Manage employee registration and maintain employee information
                 in one place.
               </p>
-
             </div>
 
             {/* Leave Management */}
             <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-green-100 text-2xl">
                 📅
               </div>
@@ -191,12 +171,10 @@ export default function HomePage() {
                 Apply for leave, track leave applications and manage
                 leave balances.
               </p>
-
             </div>
 
             {/* Work From Home */}
             <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-purple-100 text-2xl">
                 💻
               </div>
@@ -208,29 +186,23 @@ export default function HomePage() {
               <p className="mt-3 leading-7 text-gray-500">
                 Submit work-from-home requests and check their approval status.
               </p>
-
             </div>
 
           </div>
-
         </section>
       )}
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white">
-
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-6 text-sm text-gray-500 sm:flex-row">
 
-          <p>
-            © 2026 Employee Leave Management System
-          </p>
+          <p>© 2026 Employee Leave Management System</p>
 
           <p>
             Employee Management | Leave Management | WFH Management
           </p>
 
         </div>
-
       </footer>
 
     </main>

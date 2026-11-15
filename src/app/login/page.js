@@ -13,6 +13,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   function handleChange(e) {
     setForm({
@@ -24,15 +27,22 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setMessage("");
+    setSuccess(false);
+
+    if (!API_URL) {
+      setMessage("API URL is missing. Check your .env.local file.");
+      return;
+    }
 
     try {
       setLoading(true);
 
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch("/api/backend/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           email: form.email,
           password: form.password,
@@ -42,27 +52,33 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message || "Invalid email or password");
+        setMessage(data.message || "Invalid email or password.");
         return;
       }
 
+      setSuccess(true);
       setMessage("Login successful!");
 
-      // Redirect based on the role returned by your backend.
-      if (data.user?.role === "ADMIN") {
+      const user = data.user || data.data?.user;
+
+      if (user?.role === "ADMIN") {
         window.location.href = "/admin/dashboard";
-      } else {
+      } else if (user?.role === "EMPLOYEE") {
         window.location.href = "/employee/dashboard";
+      } else {
+        setMessage("Login response does not contain a valid user role.");
+        setSuccess(false);
       }
-    } catch {
-      setMessage("Unable to connect to server");
+    } catch (error) {
+      console.error("Login error:", error);
+      setMessage("Unable to connect to server. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   const inputClass =
-    "mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100";
+    "mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 text-black caret-black placeholder:text-gray-400 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100";
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -100,7 +116,6 @@ export default function LoginPage() {
       {/* Navigation */}
       <nav className="bg-blue-900 text-white">
         <div className="mx-auto flex max-w-7xl gap-6 px-6 py-4">
-
           <Link href="/" className="hover:text-blue-200">
             Home
           </Link>
@@ -110,7 +125,6 @@ export default function LoginPage() {
           <span className="font-semibold">
             Login
           </span>
-
         </div>
       </nav>
 
@@ -136,7 +150,7 @@ export default function LoginPage() {
 
           </div>
 
-          {/* Form */}
+          {/* Login Form */}
           <form
             onSubmit={handleSubmit}
             className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10"
@@ -155,11 +169,15 @@ export default function LoginPage() {
             {/* Email */}
             <div className="mb-5">
 
-              <label className="font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="font-medium text-gray-700"
+              >
                 Email Address
               </label>
 
               <input
+                id="email"
                 type="email"
                 name="email"
                 value={form.email}
@@ -175,11 +193,15 @@ export default function LoginPage() {
             {/* Password */}
             <div className="mb-6">
 
-              <label className="font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="font-medium text-gray-700"
+              >
                 Password
               </label>
 
               <input
+                id="password"
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={form.password}
@@ -210,7 +232,13 @@ export default function LoginPage() {
 
             {/* Message */}
             {message && (
-              <p className="mb-5 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+              <p
+                className={`mb-5 rounded-lg p-3 text-sm ${
+                  success
+                    ? "bg-green-50 text-green-700"
+                    : "bg-red-50 text-red-700"
+                }`}
+              >
                 {message}
               </p>
             )}
@@ -224,29 +252,16 @@ export default function LoginPage() {
               {loading ? "Logging in..." : "Login"}
             </button>
 
-            {/* Registration Links */}
+            {/* Single Registration Link */}
             <div className="mt-6 text-center text-sm text-gray-500">
 
-              <p>
-                Don't have an employee account?
-              </p>
+              Don't have an account?{" "}
 
               <Link
-                href="/admin/register"
-                className="mt-2 inline-block font-semibold text-blue-700 hover:underline"
+                href="/registration"
+                className="font-semibold text-blue-700 hover:underline"
               >
-                Employee Registration
-              </Link>
-
-              <p className="mt-4">
-                Need an admin account?
-              </p>
-
-              <Link
-                href="/admin"
-                className="mt-2 inline-block font-semibold text-blue-700 hover:underline"
-              >
-                Admin Registration
+                Register Here
               </Link>
 
             </div>
@@ -265,4 +280,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
