@@ -1,3 +1,4 @@
+
 import prisma from "@/lib/prisma";
 import { requireEmployee, requireAuth } from "@/lib/permissions";
 import {
@@ -239,6 +240,16 @@ export async function GET(request) {
     const leaves = await prisma.leaveApplication.findMany({
       where,
       include: {
+        // Employee details added for Admin dashboard
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            employeeCode: true,
+          },
+        },
+
         leaveType: {
           select: {
             id: true,
@@ -246,6 +257,7 @@ export async function GET(request) {
             code: true,
           },
         },
+
         allocations: {
           include: {
             entitlement: true,
