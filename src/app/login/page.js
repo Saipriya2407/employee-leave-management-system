@@ -213,23 +213,27 @@ export default function LoginPage() {
               />
 
               {/* Show Password */}
-              <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+{/* Show Password and Forgot Password */}
+<div className="mt-3 flex items-center justify-between">
 
-                <input
-                  type="checkbox"
-                  checked={showPassword}
-                  onChange={(e) =>
-                    setShowPassword(e.target.checked)
-                  }
-                  className="h-4 w-4"
-                />
+  <label className="flex items-center gap-2 text-sm text-gray-600">
+    <input
+      type="checkbox"
+      checked={showPassword}
+      onChange={(e) => setShowPassword(e.target.checked)}
+      className="h-4 w-4"
+    />
+    Show Password
+  </label>
 
-                Show Password
+  <Link
+    href="/forgot-password"
+    className="text-sm font-semibold text-blue-700 hover:underline"
+  >
+    Forgot Password?
+  </Link>
 
-              </label>
-
-            </div>
-
+</div>
             {/* Message */}
             {message && (
               <p
