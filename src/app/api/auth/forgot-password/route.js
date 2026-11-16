@@ -51,10 +51,10 @@ export async function POST(request) {
       });
     });
 
-    const appUrl = process.env.APP_URL;
+    const appUrl = process.env.FRONTEND_URL;
 
     if (!appUrl) {
-      throw new Error("APP_URL is not configured.");
+      throw new Error("FRONTEND_URL is not configured.");
     }
 
     const resetUrl = new URL("/reset-password", appUrl);
