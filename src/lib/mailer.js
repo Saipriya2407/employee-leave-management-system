@@ -2,11 +2,16 @@
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  connectionTimeout: 20000,
+  greetingTimeout: 20000,
+  socketTimeout: 30000,
 });
 
 export async function sendPasswordResetEmail(email, resetUrl) {
@@ -36,9 +41,8 @@ This link expires in 15 minutes. If you did not request this, ignore this email.
           </a>
         </p>
         <p>This link expires in 15 minutes.</p>
-        <p>If you did not request this, you can ignore this email.</p>
+        <p>If you did not request this, ignore this email.</p>
       </div>
     `,
   });
 }
-
