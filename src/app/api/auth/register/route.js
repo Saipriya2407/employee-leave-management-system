@@ -1,7 +1,6 @@
 
 import prisma from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { requireAuth } from "@/lib/permissions";
 import { successResponse, errorResponse } from "@/lib/response";
 import { validateEmail, validatePassword } from "@/lib/validation";
 
@@ -29,7 +28,7 @@ const DEFAULT_LEAVE_TYPES = [
   },
 ];
 
-// Create the counter and assign codes to existing users without codes.
+// Prepare employee/Admin code counters.
 async function prepareRoleCounter(tx, role) {
   await tx.employeeCodeCounter.upsert({
     where: { role },
@@ -46,9 +45,9 @@ async function prepareRoleCounter(tx, role) {
   });
 
   let maxNumber = 0;
+  const prefix = role === "ADMIN" ? "ADM" : "EMP";
 
   for (const item of existingCodes) {
-    const prefix = role === "ADMIN" ? "ADM" : "EMP";
     const match = item.employeeCode?.match(
       new RegExp(`^${prefix}(\\d+)$`)
     );
@@ -84,7 +83,6 @@ async function prepareRoleCounter(tx, role) {
       data: { value: { increment: 1 } },
     });
 
-    const prefix = role === "ADMIN" ? "ADM" : "EMP";
     const employeeCode =
       `${prefix}${String(updatedCounter.value).padStart(3, "0")}`;
 
@@ -95,7 +93,7 @@ async function prepareRoleCounter(tx, role) {
   }
 }
 
-// Generate the next code for a new user.
+// Generate the next employee/Admin code.
 async function generateEmployeeCode(tx, role) {
   const updatedCounter = await tx.employeeCodeCounter.update({
     where: { role },
@@ -116,81 +114,153 @@ export async function POST(request) {
     }
 
     const { fullName, email, password, department } = body;
-    const requestedRole = body.role || "EMPLOYEE";
 
+    const requestedRole = String(
+      body.role || "EMPLOYEE"
+    ).trim().toUpperCase();
+
+    // Validate role.
     if (!["EMPLOYEE", "ADMIN"].includes(requestedRole)) {
       return errorResponse("Invalid role.", 400);
     }
 
+    // Validate name.
     if (typeof fullName !== "string" || !fullName.trim()) {
       return errorResponse("Full name is required.", 400);
     }
 
+    // Validate email.
     const emailCheck = validateEmail(email);
 
     if (!emailCheck.isValid) {
       return errorResponse(emailCheck.error, 400);
     }
 
+    // Validate password.
     const passwordCheck = validatePassword(password, 6);
 
     if (!passwordCheck.isValid) {
       return errorResponse(passwordCheck.error, 400);
     }
 
+    // Validate department.
     if (typeof department !== "string" || !department.trim()) {
       return errorResponse("Department is required.", 400);
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-
-    const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    if (existingUser) {
-      return errorResponse(
-        "An account with this email already exists.",
-        409
-      );
-    }
-
-    // Admin registration rules.
-    if (requestedRole === "ADMIN") {
-      const adminExists = await prisma.user.findFirst({
-        where: { role: "ADMIN" },
-        select: { id: true },
-      });
-
-      if (!adminExists) {
-        const secretCode = body.adminCode;
-
-        if (
-          !process.env.ADMIN_REGISTRATION_CODE ||
-          secretCode !== process.env.ADMIN_REGISTRATION_CODE
-        ) {
-          return errorResponse(
-            "Invalid Admin registration code.",
-            403
-          );
-        }
-      } else {
-        const auth = await requireAuth(request);
-
-        if (!auth.authorized || auth.user.role !== "ADMIN") {
-          return errorResponse(
-            "Only an existing Admin can register another Admin.",
-            403
-          );
-        }
-      }
-    }
-
     const hashedPassword = await hashPassword(password);
 
-    const user = await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
-        // Create default leave types if they do not exist.
+        // Check whether this email already belongs to a user.
+        const existingUser = await tx.user.findUnique({
+          where: { email: normalizedEmail },
+        });
+
+        if (existingUser) {
+          throw new Error("EMAIL_ALREADY_EXISTS");
+        }
+
+        // ==========================================
+        // ADMIN REGISTRATION
+        // ==========================================
+        if (requestedRole === "ADMIN") {
+          const adminExists = await tx.user.findFirst({
+            where: { role: "ADMIN" },
+            select: { id: true },
+          });
+
+          // FIRST ADMIN: Register immediately.
+          if (!adminExists) {
+            if (
+              !process.env.ADMIN_REGISTRATION_CODE ||
+              body.adminCode !== process.env.ADMIN_REGISTRATION_CODE
+            ) {
+              throw new Error("INVALID_ADMIN_CODE");
+            }
+
+            for (const type of DEFAULT_LEAVE_TYPES) {
+              await tx.leaveType.upsert({
+                where: { code: type.code },
+                update: {},
+                create: type,
+              });
+            }
+
+            await prepareRoleCounter(tx, "EMPLOYEE");
+            await prepareRoleCounter(tx, "ADMIN");
+
+            const employeeCode = await generateEmployeeCode(
+              tx,
+              "ADMIN"
+            );
+
+            const admin = await tx.user.create({
+              data: {
+                employeeCode,
+                fullName: fullName.trim(),
+                email: normalizedEmail,
+                password: hashedPassword,
+                department: department.trim(),
+                role: "ADMIN",
+              },
+              select: {
+                id: true,
+                employeeCode: true,
+                fullName: true,
+                email: true,
+                department: true,
+                role: true,
+                createdAt: true,
+              },
+            });
+
+            return {
+              type: "FIRST_ADMIN",
+              user: admin,
+            };
+          }
+
+          // ADDITIONAL ADMIN: Create a pending request.
+          const existingRequest =
+            await tx.adminRegistrationRequest.findUnique({
+              where: { email: normalizedEmail },
+            });
+
+          if (existingRequest) {
+            throw new Error("ADMIN_REQUEST_ALREADY_EXISTS");
+          }
+
+          const adminRequest =
+            await tx.adminRegistrationRequest.create({
+              data: {
+                fullName: fullName.trim(),
+                email: normalizedEmail,
+                password: hashedPassword,
+                department: department.trim(),
+                status: "PENDING",
+              },
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                department: true,
+                status: true,
+                createdAt: true,
+              },
+            });
+
+          return {
+            type: "ADMIN_REQUEST",
+            request: adminRequest,
+          };
+        }
+
+        // ==========================================
+        // EMPLOYEE REGISTRATION
+        // ==========================================
+
         for (const type of DEFAULT_LEAVE_TYPES) {
           await tx.leaveType.upsert({
             where: { code: type.code },
@@ -199,24 +269,22 @@ export async function POST(request) {
           });
         }
 
-        // Assign codes to existing users in both roles.
         await prepareRoleCounter(tx, "EMPLOYEE");
         await prepareRoleCounter(tx, "ADMIN");
 
-        // Generate the new user's code.
         const employeeCode = await generateEmployeeCode(
           tx,
-          requestedRole
+          "EMPLOYEE"
         );
 
-        return tx.user.create({
+        const user = await tx.user.create({
           data: {
             employeeCode,
             fullName: fullName.trim(),
             email: normalizedEmail,
             password: hashedPassword,
             department: department.trim(),
-            role: requestedRole,
+            role: "EMPLOYEE",
           },
           select: {
             id: true,
@@ -228,6 +296,11 @@ export async function POST(request) {
             createdAt: true,
           },
         });
+
+        return {
+          type: "EMPLOYEE",
+          user,
+        };
       },
       {
         isolationLevel: "Serializable",
@@ -236,17 +309,56 @@ export async function POST(request) {
       }
     );
 
+    // Return appropriate response.
+    if (result.type === "ADMIN_REQUEST") {
+      return successResponse(
+        result.request,
+        "Admin registration request submitted successfully. Please wait for approval from an existing Admin.",
+        201
+      );
+    }
+
+    if (result.type === "FIRST_ADMIN") {
+      return successResponse(
+        result.user,
+        "First Admin registered successfully.",
+        201
+      );
+    }
+
     return successResponse(
-      user,
-      `${requestedRole} registered successfully.`,
+      result.user,
+      "Employee registered successfully.",
       201
     );
+
   } catch (error) {
     console.error("Register Error:", error);
 
+    if (error.message === "EMAIL_ALREADY_EXISTS") {
+      return errorResponse(
+        "An account with this email already exists.",
+        409
+      );
+    }
+
+    if (error.message === "INVALID_ADMIN_CODE") {
+      return errorResponse(
+        "Invalid Admin registration code.",
+        403
+      );
+    }
+
+    if (error.message === "ADMIN_REQUEST_ALREADY_EXISTS") {
+      return errorResponse(
+        "An Admin registration request with this email already exists.",
+        409
+      );
+    }
+
     if (error.code === "P2002") {
       return errorResponse(
-        "An account or employee code already exists. Please try again.",
+        "An account, registration request, or employee code already exists.",
         409
       );
     }
