@@ -1,52 +1,68 @@
 
-export async function sendPasswordResetEmail(email, resetUrl) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM;
+import { google } from "googleapis";
 
-  if (!apiKey || !fromEmail) {
-    throw new Error("Resend email configuration is missing.");
+export async function sendPasswordResetEmail(email, resetUrl) {
+  const {
+    GMAIL_CLIENT_ID,
+    GMAIL_CLIENT_SECRET,
+    GMAIL_REFRESH_TOKEN,
+    EMAIL_USER,
+  } = process.env;
+
+  if (
+    !GMAIL_CLIENT_ID ||
+    !GMAIL_CLIENT_SECRET ||
+    !GMAIL_REFRESH_TOKEN ||
+    !EMAIL_USER
+  ) {
+    throw new Error("Gmail API configuration is missing.");
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: [email],
-      subject: "Reset Your ELMS Password",
-      text: `You requested a password reset.
+  const oauth2Client = new google.auth.OAuth2(
+    GMAIL_CLIENT_ID,
+    GMAIL_CLIENT_SECRET
+  );
 
-Click this link to reset your password:
-${resetUrl}
-
-This link expires in 15 minutes. If you did not request this, ignore this email.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-          <h2>ELMS Password Reset</h2>
-          <p>We received a request to reset your password.</p>
-          <p>
-            <a href="${resetUrl}"
-               style="background:#2563eb;color:white;padding:12px 20px;
-               text-decoration:none;border-radius:6px;">
-              Reset Password
-            </a>
-          </p>
-          <p>This link expires in 15 minutes.</p>
-          <p>If you did not request this, ignore this email.</p>
-        </div>
-      `,
-    }),
+  oauth2Client.setCredentials({
+    refresh_token: GMAIL_REFRESH_TOKEN,
   });
 
-  const result = await response.json();
+  const gmail = google.gmail({
+    version: "v1",
+    auth: oauth2Client,
+  });
 
-  if (!response.ok) {
-    console.error("Resend email error:", result);
-    throw new Error(result.message || "Unable to send password reset email.");
-  }
+  const subject = "Reset Your ELMS Password";
 
-  return result;
+  const html = `
+    <h2>Password Reset Request</h2>
+    <p>We received a request to reset your ELMS password.</p>
+    <p>Click the link below to reset your password:</p>
+    <a href="${resetUrl}">Reset My Password</a>
+    <p>This link expires in 15 minutes.</p>
+    <p>If you did not request this, please ignore this email.</p>
+  `;
+
+  const message = [
+    `From: ELMS <${EMAIL_USER}>`,
+    `To: ${email}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    "Content-Type: text/html; charset=utf-8",
+    "",
+    html,
+  ].join("\r\n");
+
+  const raw = Buffer.from(message)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  const result = await gmail.users.messages.send({
+    userId: "me",
+    requestBody: { raw },
+  });
+
+  return result.data;
 }
