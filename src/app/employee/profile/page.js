@@ -81,19 +81,19 @@ setUser(profileUser);
         {
           label: "Employee ID",
           value: getValue(
+             user.employeeCode,
             user.employeeId,
             user.employee_id,
-            user.id
+            
           ),
           icon: "🆔",
         },
         {
           label: "Department",
-         value: getValue(
-         user.employeeCode,
-         user.employeeId,
-         user.employee_id
-),
+         value: getValue(user.department),
+         
+        
+
         
           icon: "🏢",
         },

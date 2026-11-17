@@ -15,30 +15,34 @@ export default function ApplyLeavePage() {
     reason: "",
   });
 
+  const [todayString, setTodayString] = useState("");
+  const [currentQuarter, setCurrentQuarter] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Get current date
-  const today = new Date();
-  const todayString = [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0"),
-  ].join("-");
-
-  // Current quarter
-  const currentQuarter = Math.floor(today.getMonth() / 3) + 1;
-
-  // Load leave types and balances
+  // Load current date, quarter, leave types and balances
   useEffect(() => {
+    const today = new Date();
+
+    const dateString = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    setTodayString(dateString);
+    setCurrentQuarter(Math.floor(today.getMonth() / 3) + 1);
+
     async function fetchLeaveData() {
       try {
         setLoading(true);
         setMessage("");
 
+        // Fetch leave types
         const response = await fetch("/api/backend/leave-types", {
           method: "GET",
           credentials: "include",
@@ -52,21 +56,23 @@ export default function ApplyLeavePage() {
           );
         }
 
-       const types = Array.isArray(data.data?.leaveTypes)
-  ? data.data.leaveTypes
-  : Array.isArray(data.leaveTypes)
-  ? data.leaveTypes
-  : Array.isArray(data.data)
-  ? data.data
-  : [];
+        const types = Array.isArray(data.data?.leaveTypes)
+          ? data.data.leaveTypes
+          : Array.isArray(data.leaveTypes)
+          ? data.leaveTypes
+          : Array.isArray(data.data)
+          ? data.data
+          : [];
 
-setLeaveTypes(
-  types.filter(
-    (type) => type.isActive !== false && type.active !== false
-  )
-);
+        setLeaveTypes(
+          types.filter(
+            (type) =>
+              type.isActive !== false &&
+              type.active !== false
+          )
+        );
 
-        // Load employee leave balance
+        // Fetch employee balances
         const balanceResponse = await fetch(
           "/api/backend/leaves/balance",
           {
@@ -85,16 +91,17 @@ setLeaveTypes(
         }
 
         const employeeBalances = Array.isArray(
-          balanceData.balances
+          balanceData.data?.balances
         )
+          ? balanceData.data.balances
+          : Array.isArray(balanceData.balances)
           ? balanceData.balances
-          : Array.isArray(balanceData.leaveBalances)
-          ? balanceData.leaveBalances
           : [];
 
         setBalances(employeeBalances);
       } catch (error) {
-        setMessage(error.message);
+        console.error("Leave data error:", error);
+        setMessage(error.message || "Unable to load leave data.");
       } finally {
         setLoading(false);
       }
@@ -105,27 +112,26 @@ setLeaveTypes(
 
   // Selected leave type
   const selectedLeaveType = useMemo(() => {
-    return leaveTypes.find(
-      (type) =>
-        String(type.id) === String(form.leaveType) ||
-        String(type.code) === String(form.leaveType)
+    return (
+      leaveTypes.find(
+        (type) =>
+          String(type.id) === String(form.leaveType)
+      ) || null
     );
   }, [leaveTypes, form.leaveType]);
 
-  // Find balance for selected leave type
+  // Find balance using leave type CODE
   const selectedBalance = useMemo(() => {
     if (!selectedLeaveType) {
       return null;
     }
 
-    return balances.find(
-      (balance) =>
-        String(balance.leaveTypeId) ===
-          String(selectedLeaveType.id) ||
-        String(balance.leaveType?.id) ===
-          String(selectedLeaveType.id) ||
-        String(balance.leaveType) ===
-          String(selectedLeaveType.code)
+    return (
+      balances.find(
+        (balance) =>
+          String(balance.code || "").trim().toUpperCase() ===
+          String(selectedLeaveType.code || "").trim().toUpperCase()
+      ) || null
     );
   }, [balances, selectedLeaveType]);
 
@@ -135,19 +141,13 @@ setLeaveTypes(
       return 0;
     }
 
-    const start = new Date(
-      `${form.startDate}T00:00:00`
-    );
-
-    const end = new Date(
-      `${form.endDate}T00:00:00`
-    );
+    const start = new Date(`${form.startDate}T00:00:00`);
+    const end = new Date(`${form.endDate}T00:00:00`);
 
     if (end < start) {
       return 0;
     }
 
-    // Inclusive calendar days
     return (
       Math.round(
         (end.getTime() - start.getTime()) /
@@ -179,6 +179,33 @@ setLeaveTypes(
     setSuccess(false);
   }
 
+  // Refresh employee balance
+  async function refreshBalances() {
+    const response = await fetch(
+      "/api/backend/leaves/balance",
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Unable to refresh leave balance."
+      );
+    }
+
+    const employeeBalances = Array.isArray(data.data?.balances)
+      ? data.data.balances
+      : Array.isArray(data.balances)
+      ? data.balances
+      : [];
+
+    setBalances(employeeBalances);
+  }
+
   // Submit application
   async function handleSubmit(event) {
     event.preventDefault();
@@ -186,43 +213,38 @@ setLeaveTypes(
     setMessage("");
     setSuccess(false);
 
-    // Required leave type
     if (!form.leaveType) {
       setMessage("Please select a leave type.");
       return;
     }
 
-    // Required dates
     if (!form.startDate || !form.endDate) {
       setMessage("Please select both dates.");
       return;
     }
 
-    // Prevent past dates
     if (form.startDate < todayString) {
       setMessage("Start date cannot be in the past.");
       return;
     }
 
-    // Validate date range
     if (form.endDate < form.startDate) {
       setMessage("End date cannot be before start date.");
       return;
     }
 
-    // Validate reason
     if (form.reason.trim().length < 5) {
-      setMessage("Please enter a reason of at least 5 characters.");
+      setMessage(
+        "Please enter a reason of at least 5 characters."
+      );
       return;
     }
 
-    // Validate selected type
     if (!selectedLeaveType) {
       setMessage("Selected leave type is unavailable.");
       return;
     }
 
-    // Validate balance
     if (!selectedBalance) {
       setMessage(
         "Leave balance is unavailable. Please refresh the page."
@@ -237,17 +259,15 @@ setLeaveTypes(
       return;
     }
 
-    // Validate current quarter for standard leave types
+    // Validate current quarter for Casual Leave and WFH
     const leaveCode = String(
-      selectedLeaveType.code ||
-        selectedLeaveType.name ||
-        ""
-    ).toUpperCase();
+      selectedLeaveType.code || ""
+    ).trim().toUpperCase();
 
     const isQuarterlyLeave = [
       "CASUAL",
-      "CASUAL_LEAVE",
       "CL",
+      "CASUAL_LEAVE",
       "WFH",
       "WORK_FROM_HOME",
     ].includes(leaveCode);
@@ -288,10 +308,9 @@ setLeaveTypes(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          leaveTypeId: selectedLeaveType.id,
+          leaveType: selectedLeaveType.code,
           startDate: form.startDate,
           endDate: form.endDate,
-          days: totalDays,
           reason: form.reason.trim(),
         }),
       });
@@ -316,26 +335,9 @@ setLeaveTypes(
         reason: "",
       });
 
-      // Refresh balance after submission
-      const balanceResponse = await fetch(
-        "/api/backend/leaves/balance",
-        {
-          credentials: "include",
-        }
-      );
-
-      const balanceData = await balanceResponse.json();
-
-      if (balanceResponse.ok) {
-        setBalances(
-          Array.isArray(balanceData.balances)
-            ? balanceData.balances
-            : Array.isArray(balanceData.leaveBalances)
-            ? balanceData.leaveBalances
-            : []
-        );
-      }
+      await refreshBalances();
     } catch (error) {
+      console.error("Apply leave error:", error);
       setMessage(
         error.message || "Unable to connect to server."
       );
@@ -346,11 +348,9 @@ setLeaveTypes(
 
   return (
     <main className="min-h-screen bg-gray-100 text-gray-900">
-
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-5 py-5 sm:flex-row sm:items-center">
-
           <div>
             <Link
               href="/employee/dashboard"
@@ -365,7 +365,6 @@ setLeaveTypes(
           </div>
 
           <nav className="flex flex-wrap gap-4 text-sm font-semibold">
-
             <Link
               href="/employee/dashboard"
               className="hover:text-blue-700"
@@ -393,17 +392,13 @@ setLeaveTypes(
             >
               Profile
             </Link>
-
           </nav>
-
         </div>
       </header>
 
       {/* Main */}
       <section className="mx-auto max-w-3xl px-5 py-10 sm:py-14">
-
         <div className="mb-8">
-
           <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
             Employee Portal
           </p>
@@ -415,12 +410,10 @@ setLeaveTypes(
           <p className="mt-2 text-gray-600">
             Submit your leave request for admin approval.
           </p>
-
         </div>
 
         {/* Quarterly policy */}
         <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-5">
-
           <h2 className="font-bold text-blue-900">
             Leave Policy
           </h2>
@@ -432,14 +425,13 @@ setLeaveTypes(
           </p>
 
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-
             <div className="rounded-lg bg-white p-3">
               <p className="text-xs text-gray-500">
                 Current Quarter
               </p>
 
               <p className="mt-1 font-bold text-blue-700">
-                Q{currentQuarter}
+                {currentQuarter ? `Q${currentQuarter}` : "--"}
               </p>
             </div>
 
@@ -448,9 +440,7 @@ setLeaveTypes(
                 Casual Leave
               </p>
 
-              <p className="mt-1 font-bold">
-                3/ Quarter
-              </p>
+              <p className="mt-1 font-bold">3 / Quarter</p>
             </div>
 
             <div className="rounded-lg bg-white p-3">
@@ -458,9 +448,7 @@ setLeaveTypes(
                 Sick Leave
               </p>
 
-              <p className="mt-1 font-bold">
-                3/ Quarter
-              </p>
+              <p className="mt-1 font-bold">3 / Quarter</p>
             </div>
 
             <div className="rounded-lg bg-white p-3">
@@ -468,13 +456,9 @@ setLeaveTypes(
                 WFH
               </p>
 
-              <p className="mt-1 font-bold">
-                3 / Quarter
-              </p>
+              <p className="mt-1 font-bold">3 / Quarter</p>
             </div>
-
           </div>
-
         </div>
 
         {/* Loading */}
@@ -489,10 +473,8 @@ setLeaveTypes(
           onSubmit={handleSubmit}
           className="space-y-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8"
         >
-
           {/* Leave Type */}
           <div>
-
             <label
               htmlFor="leaveType"
               className="mb-2 block font-semibold"
@@ -509,29 +491,19 @@ setLeaveTypes(
               disabled={loading}
               className="w-full rounded-lg border border-gray-300 bg-white p-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
             >
-
-              <option value="">
-                Select Leave Type
-              </option>
+              <option value="">Select Leave Type</option>
 
               {leaveTypes.map((type) => (
-                <option
-                  key={type.id}
-                  value={type.id}
-                >
-                  {type.name}
+                <option key={type.id} value={type.id}>
+                  {String(type.name || "").trim()}
                 </option>
               ))}
-
             </select>
-
           </div>
 
           {/* Balance */}
           {selectedLeaveType && (
-
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-
               <p className="text-sm font-medium text-gray-600">
                 Available Balance
               </p>
@@ -545,14 +517,11 @@ setLeaveTypes(
               <p className="mt-1 text-xs text-gray-500">
                 Current quarter: Q{currentQuarter}
               </p>
-
             </div>
-
           )}
 
           {/* Start Date */}
           <div>
-
             <label
               htmlFor="startDate"
               className="mb-2 block font-semibold"
@@ -570,12 +539,10 @@ setLeaveTypes(
               required
               className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             />
-
           </div>
 
           {/* End Date */}
           <div>
-
             <label
               htmlFor="endDate"
               className="mb-2 block font-semibold"
@@ -593,12 +560,10 @@ setLeaveTypes(
               required
               className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             />
-
           </div>
 
           {/* Days */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-
             <p className="text-sm font-medium text-gray-600">
               Total Leave Days
             </p>
@@ -610,12 +575,10 @@ setLeaveTypes(
             <p className="mt-1 text-xs text-gray-500">
               Calculated using inclusive calendar days.
             </p>
-
           </div>
 
           {/* Reason */}
           <div>
-
             <label
               htmlFor="reason"
               className="mb-2 block font-semibold"
@@ -634,12 +597,10 @@ setLeaveTypes(
               placeholder="Enter your reason for leave..."
               className="w-full resize-y rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             />
-
           </div>
 
           {/* Message */}
           {message && (
-
             <div
               role="alert"
               className={`rounded-lg p-4 text-sm ${
@@ -650,12 +611,10 @@ setLeaveTypes(
             >
               {message}
             </div>
-
           )}
 
           {/* Buttons */}
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-
             <Link
               href="/employee/dashboard"
               className="rounded-lg border border-gray-300 px-6 py-3 text-center font-semibold hover:bg-gray-50"
@@ -665,25 +624,21 @@ setLeaveTypes(
 
             <button
               type="submit"
-              disabled={loading || submitting}
+              disabled={loading || submitting || !todayString}
               className="rounded-lg bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting
                 ? "Submitting..."
                 : "Submit Leave Application"}
             </button>
-
           </div>
-
         </form>
-
       </section>
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white px-5 py-5 text-center text-sm text-gray-500">
         © 2026 Employee Leave Management System
       </footer>
-
     </main>
   );
 }

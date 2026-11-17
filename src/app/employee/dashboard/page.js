@@ -28,12 +28,7 @@ export default function EmployeeDashboard() {
 
       // 1. Fetch employee profile
       const profileResponse = await 
-      //   `${API_URL}/api/auth/me`,
-      //   {
-      //     method: "GET",
-      //     credentials: "include",
-      //   }
-      // );
+     
                  fetch("/api/backend/auth/me", {
                  credentials: "include",
                  cache: "no-store",
@@ -406,7 +401,7 @@ export default function EmployeeDashboard() {
 
           <div className="mt-5 flex flex-wrap gap-4 text-sm">
             <span>
-              Employee ID: {employee.employeeId || employee.id || "-"}
+              Employee ID: {employee.employeeCode || "Not assigned"}
             </span>
 
             <span>

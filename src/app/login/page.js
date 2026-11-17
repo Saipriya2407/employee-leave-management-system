@@ -56,18 +56,18 @@ export default function LoginPage() {
         return;
       }
 
-      setSuccess(true);
-      setMessage("Login successful!");
-
       const user = data.user || data.data?.user;
 
       if (user?.role === "ADMIN") {
+        setSuccess(true);
+        setMessage("Login successful!");
         window.location.href = "/admin/dashboard";
       } else if (user?.role === "EMPLOYEE") {
+        setSuccess(true);
+        setMessage("Login successful!");
         window.location.href = "/employee/dashboard";
       } else {
         setMessage("Login response does not contain a valid user role.");
-        setSuccess(false);
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -82,21 +82,16 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-700 text-2xl font-bold text-white">
               E
             </div>
 
             <div>
-              <h1 className="text-xl font-bold text-blue-900">
-                ELMS
-              </h1>
-
+              <h1 className="text-xl font-bold text-blue-900">ELMS</h1>
               <p className="text-xs text-gray-500">
                 Employee Leave Management System
               </p>
@@ -109,7 +104,6 @@ export default function LoginPage() {
           >
             Home
           </Link>
-
         </div>
       </header>
 
@@ -122,20 +116,15 @@ export default function LoginPage() {
 
           <span>|</span>
 
-          <span className="font-semibold">
-            Login
-          </span>
+          <span className="font-semibold">Login</span>
         </div>
       </nav>
 
       {/* Login Section */}
       <section className="px-4 py-12">
-
         <div className="mx-auto max-w-3xl">
-
           {/* Heading */}
           <div className="mb-8 text-center">
-
             <p className="font-bold uppercase tracking-widest text-blue-700">
               Welcome Back
             </p>
@@ -147,7 +136,6 @@ export default function LoginPage() {
             <p className="mt-4 text-gray-500">
               Access your employee leave management dashboard.
             </p>
-
           </div>
 
           {/* Login Form */}
@@ -155,10 +143,7 @@ export default function LoginPage() {
             onSubmit={handleSubmit}
             className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10"
           >
-
-            <h3 className="text-xl font-bold text-gray-900">
-              Login
-            </h3>
+            <h3 className="text-xl font-bold text-gray-900">Login</h3>
 
             <p className="mt-2 text-gray-500">
               Enter your account details below.
@@ -168,7 +153,6 @@ export default function LoginPage() {
 
             {/* Email */}
             <div className="mb-5">
-
               <label
                 htmlFor="email"
                 className="font-medium text-gray-700"
@@ -187,12 +171,10 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
               />
-
             </div>
 
             {/* Password */}
             <div className="mb-6">
-
               <label
                 htmlFor="password"
                 className="font-medium text-gray-700"
@@ -212,28 +194,29 @@ export default function LoginPage() {
                 required
               />
 
-              {/* Show Password */}
-{/* Show Password and Forgot Password */}
-<div className="mt-3 flex items-center justify-between">
+              {/* Show Password and Forgot Password */}
+              <div className="mt-3 flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={(e) =>
+                      setShowPassword(e.target.checked)
+                    }
+                    className="h-4 w-4"
+                  />
+                  Show Password
+                </label>
 
-  <label className="flex items-center gap-2 text-sm text-gray-600">
-    <input
-      type="checkbox"
-      checked={showPassword}
-      onChange={(e) => setShowPassword(e.target.checked)}
-      className="h-4 w-4"
-    />
-    Show Password
-  </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-semibold text-blue-700 hover:underline"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+            </div>
 
-  <Link
-    href="/forgot-password"
-    className="text-sm font-semibold text-blue-700 hover:underline"
-  >
-    Forgot Password?
-  </Link>
-
-</div>
             {/* Message */}
             {message && (
               <p
@@ -256,31 +239,24 @@ export default function LoginPage() {
               {loading ? "Logging in..." : "Login"}
             </button>
 
-            {/* Single Registration Link */}
+            {/* Registration Link */}
             <div className="mt-6 text-center text-sm text-gray-500">
-
               Don't have an account?{" "}
-
               <Link
                 href="/registration"
                 className="font-semibold text-blue-700 hover:underline"
               >
                 Register Here
               </Link>
-
             </div>
-
           </form>
-
         </div>
-
       </section>
 
       {/* Footer */}
       <footer className="border-t bg-white py-6 text-center text-sm text-gray-500">
         © 2026 Employee Leave Management System
       </footer>
-
     </main>
   );
 }

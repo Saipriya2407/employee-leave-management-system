@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function LeaveHistoryPage() {
@@ -11,8 +11,8 @@ export default function LeaveHistoryPage() {
   const [error, setError] = useState("");
   const [cancellingId, setCancellingId] = useState(null);
 
-  // Fetch actual leave applications from backend
-  async function fetchLeaves() {
+  // Fetch leave applications
+  const fetchLeaves = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -20,33 +20,44 @@ export default function LeaveHistoryPage() {
       const response = await fetch("/api/backend/leaves", {
         method: "GET",
         credentials: "include",
+        cache: "no-store",
       });
 
       const data = await response.json();
 
-      console.log("Leave History API:", data);
+      console.log("Leave History API Response:", data);
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Unable to fetch leave history"
+          data.message || "Unable to fetch leave history."
         );
       }
 
-      const leaveData = Array.isArray(data)
-        ? data
-        : data.leaves || data.requests || data.applications || [];
+      // Handle different API response structures
+      const result = data.data ?? data;
+
+      const leaveData = Array.isArray(result)
+        ? result
+        : Array.isArray(result.leaves)
+        ? result.leaves
+        : Array.isArray(result.requests)
+        ? result.requests
+        : Array.isArray(result.applications)
+        ? result.applications
+        : [];
 
       setLeaves(leaveData);
     } catch (err) {
-      setError(err.message || "Unable to connect to server");
+      console.error("Leave history error:", err);
+      setError(err.message || "Unable to connect to server.");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     fetchLeaves();
-  }, []);
+  }, [fetchLeaves]);
 
   // Cancel pending leave application
   async function cancelLeave(id) {
@@ -61,31 +72,33 @@ export default function LeaveHistoryPage() {
       setError("");
       setCancellingId(id);
 
-      const response = await fetch("/api/backend/leaves/${id}/cancel", {
-        method: "PATCH",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `/api/backend/leaves/${id}/cancel`,
+        {
+          method: "PATCH",
+          credentials: "include",
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Unable to cancel leave"
+          data.message || "Unable to cancel leave."
         );
       }
 
-      // Refresh actual leave history from backend
-      await fetchLeaves();
-
       setMessage("Leave application cancelled successfully.");
+
+      await fetchLeaves();
     } catch (err) {
-      setError(err.message || "Unable to cancel leave");
+      setError(err.message || "Unable to cancel leave.");
     } finally {
       setCancellingId(null);
     }
   }
 
-  // Format date safely
+  // Format date
   function formatDate(date) {
     if (!date) return "-";
 
@@ -102,7 +115,7 @@ export default function LeaveHistoryPage() {
     });
   }
 
-  // Display leave status
+  // Status styling
   function getStatusStyle(status) {
     const normalizedStatus = String(status || "").toUpperCase();
 
@@ -128,9 +141,10 @@ export default function LeaveHistoryPage() {
   function getLeaveType(leave) {
     return (
       leave.leaveType?.name ||
-      leave.leaveType?.leaveTypeName ||
       leave.leaveTypeName ||
-      leave.leaveType ||
+      (typeof leave.leaveType === "string"
+        ? leave.leaveType
+        : null) ||
       leave.type ||
       "Leave"
     );
@@ -138,9 +152,9 @@ export default function LeaveHistoryPage() {
 
   // Get number of leave days
   function getLeaveDays(leave) {
+    if (leave.totalDays != null) return leave.totalDays;
     if (leave.days != null) return leave.days;
     if (leave.numberOfDays != null) return leave.numberOfDays;
-    if (leave.totalDays != null) return leave.totalDays;
 
     if (leave.startDate && leave.endDate) {
       const start = new Date(leave.startDate);
@@ -154,7 +168,9 @@ export default function LeaveHistoryPage() {
       }
 
       const difference =
-        Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        Math.round(
+          (end - start) / (1000 * 60 * 60 * 24)
+        ) + 1;
 
       return difference > 0 ? difference : "-";
     }
@@ -165,20 +181,20 @@ export default function LeaveHistoryPage() {
   const totalApplications = leaves.length;
 
   const pendingApplications = leaves.filter(
-    (leave) => String(leave.status).toUpperCase() === "PENDING"
+    (leave) =>
+      String(leave.status || "").toUpperCase() === "PENDING"
   ).length;
 
   const approvedApplications = leaves.filter(
-    (leave) => String(leave.status).toUpperCase() === "APPROVED"
+    (leave) =>
+      String(leave.status || "").toUpperCase() === "APPROVED"
   ).length;
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900">
-
       {/* Header */}
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-
           <Link
             href="/employee/dashboard"
             className="text-2xl font-bold text-blue-800"
@@ -192,16 +208,13 @@ export default function LeaveHistoryPage() {
           >
             ← Dashboard
           </Link>
-
         </div>
       </header>
 
       {/* Main content */}
       <section className="mx-auto max-w-7xl px-5 py-10">
-
-        {/* Page heading */}
+        {/* Heading */}
         <div className="mb-8">
-
           <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
             Employee Portal
           </p>
@@ -214,12 +227,10 @@ export default function LeaveHistoryPage() {
             View your leave applications, check approval status,
             and cancel pending requests.
           </p>
-
         </div>
 
         {/* Summary cards */}
         <div className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
-
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-gray-500">
               Total Applications
@@ -249,7 +260,6 @@ export default function LeaveHistoryPage() {
               {loading ? "..." : approvedApplications}
             </p>
           </div>
-
         </div>
 
         {/* Success message */}
@@ -273,11 +283,9 @@ export default function LeaveHistoryPage() {
           </div>
         )}
 
-        {/* Leave history table */}
+        {/* Leave history */}
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-
           <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-
             <div>
               <h2 className="text-lg font-bold text-gray-900">
                 Leave Applications
@@ -294,25 +302,20 @@ export default function LeaveHistoryPage() {
             >
               + Apply for Leave
             </Link>
-
           </div>
 
           {/* Loading */}
           {loading ? (
             <div className="p-12 text-center">
-
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-700" />
 
               <p className="mt-4 text-sm text-gray-500">
                 Loading your leave history...
               </p>
-
             </div>
           ) : leaves.length === 0 ? (
-
             /* Empty state */
             <div className="px-5 py-16 text-center">
-
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl">
                 📄
               </div>
@@ -332,17 +335,12 @@ export default function LeaveHistoryPage() {
               >
                 Apply for Leave
               </Link>
-
             </div>
           ) : (
-
             /* Applications table */
             <div className="overflow-x-auto">
-
               <table className="w-full min-w-[850px] text-left">
-
                 <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-
                   <tr>
                     <th className="px-6 py-4 font-semibold">
                       Leave Type
@@ -368,13 +366,10 @@ export default function LeaveHistoryPage() {
                       Action
                     </th>
                   </tr>
-
                 </thead>
 
                 <tbody className="divide-y divide-gray-100">
-
                   {leaves.map((leave) => {
-
                     const status = String(
                       leave.status || "PENDING"
                     ).toUpperCase();
@@ -386,9 +381,7 @@ export default function LeaveHistoryPage() {
                         key={leave.id}
                         className="transition hover:bg-gray-50"
                       >
-
                         <td className="px-6 py-5">
-
                           <p className="font-semibold text-gray-900">
                             {getLeaveType(leave)}
                           </p>
@@ -398,7 +391,6 @@ export default function LeaveHistoryPage() {
                               {leave.reason}
                             </p>
                           )}
-
                         </td>
 
                         <td className="whitespace-nowrap px-6 py-5 text-sm text-gray-600">
@@ -414,19 +406,15 @@ export default function LeaveHistoryPage() {
                         </td>
 
                         <td className="px-6 py-5">
-
                           <span
                             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(status)}`}
                           >
                             {status}
                           </span>
-
                         </td>
 
                         <td className="px-6 py-5">
-
                           {canCancel ? (
-
                             <button
                               onClick={() => cancelLeave(leave.id)}
                               disabled={cancellingId === leave.id}
@@ -436,33 +424,23 @@ export default function LeaveHistoryPage() {
                                 ? "Cancelling..."
                                 : "Cancel"}
                             </button>
-
                           ) : (
-
                             <span className="text-sm text-gray-400">
                               —
                             </span>
-
                           )}
-
                         </td>
-
                       </tr>
                     );
                   })}
-
                 </tbody>
-
               </table>
-
             </div>
           )}
-
         </div>
 
-        {/* Bottom information */}
+        {/* Information */}
         <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
-
           <p className="text-sm font-semibold text-blue-900">
             Leave application information
           </p>
@@ -472,11 +450,8 @@ export default function LeaveHistoryPage() {
             rejected, or cancelled applications remain in your
             history for reference.
           </p>
-
         </div>
-
       </section>
-
     </main>
   );
 }
