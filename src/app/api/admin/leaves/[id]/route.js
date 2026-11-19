@@ -1,29 +1,28 @@
+
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
-import { successResponse, errorResponse } from "@/lib/response";
-import { isValidUUID } from "@/lib/validation";
+import {
+  successResponse,
+  errorResponse,
+} from "@/lib/response";
+import {
+  approveQuarterlyAllocation,
+  releaseQuarterlyAllocation,
+} from "@/lib/quarterly-policy";
 
-const LEAVE_BALANCE_FIELDS = {
-  CASUAL: "casualLeave",
-  SICK: "sickLeave",
-  EARNED: "earnedLeave",
-};
-
-/**
- * GET /api/admin/leaves/[id]
- * Retrieves single application details for administrator inspection
- */
+// GET: Retrieve one leave application
 export async function GET(request, { params }) {
   try {
     const auth = await requireAdmin(request);
+
     if (!auth.authorized) {
       return auth.response;
     }
 
     const { id } = await params;
 
-    if (!isValidUUID(id)) {
-      return errorResponse("Invalid leave application ID format. Must be a valid UUID.", 400);
+    if (!id || typeof id !== "string") {
+      return errorResponse("Invalid leave application ID.", 400);
     }
 
     const leave = await prisma.leaveApplication.findUnique({
@@ -38,6 +37,12 @@ export async function GET(request, { params }) {
             role: true,
           },
         },
+        leaveType: true,
+        allocations: {
+          include: {
+            entitlement: true,
+          },
+        },
       },
     });
 
@@ -45,141 +50,184 @@ export async function GET(request, { params }) {
       return errorResponse("Leave application not found.", 404);
     }
 
-    return successResponse(leave, "Leave application retrieved successfully.", 200);
+    return successResponse(
+      leave,
+      "Leave application retrieved successfully.",
+      200
+    );
   } catch (error) {
     console.error("Admin Get Leave Error:", error);
-    return errorResponse("Internal server error retrieving leave details.", 500);
+    return errorResponse("Unable to retrieve leave details.", 500);
   }
 }
 
-/**
- * PATCH /api/admin/leaves/[id]
- * Approves or Rejects an employee's leave application
- *
- * Requirements:
- * 1. Admin access only (verified via JWT & role).
- * 2. Validates application ID format (UUID).
- * 3. Status must be "APPROVED" or "REJECTED".
- * 4. Rejection strictly requires non-empty adminRemarks.
- * 5. Already processed applications (APPROVED, REJECTED, CANCELLED) cannot be updated again.
- * 6. Checks available balance before approval to prevent negative balances.
- * 7. Deducts the corresponding leave quota atomically using Prisma transactions.
- * 8. Returns HTTP 200 with updated details.
- */
+// PATCH: Approve or reject a leave application
 export async function PATCH(request, { params }) {
   try {
-    // 1. Guard route: Admin access only
     const auth = await requireAdmin(request);
+
     if (!auth.authorized) {
       return auth.response;
     }
 
     const { id } = await params;
 
-    // 2. Validate application ID format
-    if (!isValidUUID(id)) {
-      return errorResponse("Invalid leave application ID format. Must be a valid UUID.", 400);
+    if (!id || typeof id !== "string") {
+      return errorResponse("Invalid leave application ID.", 400);
     }
 
     const body = await request.json().catch(() => null);
-    if (!body) {
-      return errorResponse("Invalid JSON request body.", 400);
+
+    if (!body || typeof body.status !== "string") {
+      return errorResponse("Invalid request body or status.", 400);
     }
 
-    const { status, adminRemarks } = body;
+    const nextStatus = body.status.toUpperCase();
+    const adminRemarks = body.adminRemarks;
 
-    // 3. Validate status parameter
-    if (!status || !["APPROVED", "REJECTED"].includes(status.toUpperCase())) {
-      return errorResponse("Status must be either 'APPROVED' or 'REJECTED'.", 400);
-    }
-
-    const nextStatus = status.toUpperCase();
-
-    // 4. Rejection requires admin remarks
-    if (nextStatus === "REJECTED") {
-      if (!adminRemarks || typeof adminRemarks !== "string" || !adminRemarks.trim()) {
-        return errorResponse("Admin remarks are required when rejecting a leave application.", 400);
-      }
-    }
-
-    // 5. Fetch target application from PostgreSQL
-    const leave = await prisma.leaveApplication.findUnique({
-      where: { id },
-    });
-
-    if (!leave) {
-      return errorResponse("Leave application not found.", 404);
-    }
-
-    // 6. Ensure application is still PENDING (prevents processing already finalized requests)
-    if (leave.status !== "PENDING") {
+    if (!["APPROVED", "REJECTED"].includes(nextStatus)) {
       return errorResponse(
-        `Cannot process request. This leave application is already marked as ${leave.status}.`,
+        "Status must be APPROVED or REJECTED.",
         400
       );
     }
 
-    const balanceField = LEAVE_BALANCE_FIELDS[leave.leaveType];
+    if (
+      nextStatus === "REJECTED" &&
+      (!adminRemarks ||
+        typeof adminRemarks !== "string" ||
+        !adminRemarks.trim())
+    ) {
+      return errorResponse(
+        "Admin remarks are required when rejecting a leave application.",
+        400
+      );
+    }
 
-    // 7. Atomic Prisma Transaction: performs balance check, deduction, and status update
-    const updatedApplication = await prisma.$transaction(async (tx) => {
-      if (nextStatus === "APPROVED") {
-        // Fetch current leave balance
-        const balance = await tx.leaveBalance.findUnique({
-          where: { userId: leave.userId },
+    const updatedApplication = await prisma.$transaction(
+      async (tx) => {
+        const leave = await tx.leaveApplication.findUnique({
+          where: { id },
+          include: {
+            leaveType: true,
+            allocations: true,
+          },
         });
 
-        if (!balance || balance[balanceField] < leave.totalDays) {
-          const available = balance ? balance[balanceField] : 0;
+        if (!leave) {
+          throw new Error("Leave application not found.");
+        }
+
+        if (leave.status !== "PENDING") {
           throw new Error(
-            `Insufficient quota: Employee only has ${available} remaining days for ${leave.leaveType} leave, but applied for ${leave.totalDays} day(s).`
+            `This application is already ${leave.status}.`
           );
         }
 
-        // Deduct approved days from employee's leave balance
-        await tx.leaveBalance.update({
-          where: { userId: leave.userId },
+        if (!leave.leaveType) {
+          throw new Error("Leave type information is missing.");
+        }
+
+        if (!leave.allocations || leave.allocations.length === 0) {
+          throw new Error("No quarterly allocations found.");
+        }
+
+        // APPROVED: reserved days become used days.
+        if (nextStatus === "APPROVED") {
+          await approveQuarterlyAllocation(
+            tx,
+            leave.allocations
+          );
+        }
+
+        // REJECTED: release reserved days.
+        if (nextStatus === "REJECTED") {
+          await releaseQuarterlyAllocation(
+            tx,
+            leave.allocations
+          );
+        }
+
+        // Update only if the application is still pending.
+        const result = await tx.leaveApplication.updateMany({
+          where: {
+            id,
+            status: "PENDING",
+          },
           data: {
-            [balanceField]: {
-              decrement: leave.totalDays,
+            status: nextStatus,
+            adminRemarks: adminRemarks?.trim() || null,
+          },
+        });
+
+        if (result.count !== 1) {
+          throw new Error(
+            "This application has already been processed."
+          );
+        }
+
+        return tx.leaveApplication.findUnique({
+          where: { id },
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                department: true,
+                role: true,
+              },
+            },
+            leaveType: true,
+            allocations: {
+              include: {
+                entitlement: true,
+              },
             },
           },
         });
+      },
+      {
+        isolationLevel: "Serializable",
       }
-
-      // Update the leave application status and adminRemarks
-      return await tx.leaveApplication.update({
-        where: { id },
-        data: {
-          status: nextStatus,
-          adminRemarks: adminRemarks ? adminRemarks.trim() : null,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              email: true,
-              department: true,
-              role: true,
-            },
-          },
-        },
-      });
-    });
+    );
 
     return successResponse(
       updatedApplication,
-      `Leave application has been ${nextStatus.toLowerCase()} successfully.`,
+      `Leave application ${nextStatus.toLowerCase()} successfully.`,
       200
     );
   } catch (error) {
     console.error("Admin Process Leave Error:", error);
-    const isBusinessError = error.message.startsWith("Insufficient quota:");
+
+    if (error.code === "P2034") {
+      return errorResponse(
+        "Another request was processed at the same time. Please try again.",
+        409
+      );
+    }
+
+    const businessErrors = [
+      "Leave application not found.",
+      "This application is already",
+      "Leave type information is missing.",
+      "No quarterly allocations found.",
+      "Could not approve allocation:",
+      "Could not release allocation:",
+      "This application has already been processed.",
+    ];
+
+    if (
+      businessErrors.some((message) =>
+        error.message?.startsWith(message)
+      )
+    ) {
+      return errorResponse(error.message, 400);
+    }
+
     return errorResponse(
-      isBusinessError ? error.message : "Internal server error processing leave application.",
-      isBusinessError ? 400 : 500
+      "Internal server error processing leave application.",
+      500
     );
   }
 }
-
