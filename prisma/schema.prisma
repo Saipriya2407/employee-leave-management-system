@@ -9,15 +9,23 @@ datasource db {
 
 model User {
   id                    String                 @id @default(cuid())
+
   employeeCode          String?                @unique
+
+
   fullName              String
   email                 String                 @unique
   password              String
   department            String
   role                  UserRole               @default(EMPLOYEE)
   createdAt             DateTime               @default(now())
+<<<<<<< HEAD
   leaveApplications     LeaveApplication[]
   leaveBalance          LeaveBalance?
+=======
+
+  leaveApplications     LeaveApplication[]
+>>>>>>> origin/database
   quarterlyEntitlements QuarterlyEntitlement[]
 
   @@map("users")
@@ -33,6 +41,10 @@ model LeaveType {
   isActive              Boolean                @default(true)
   effectiveFrom         DateTime               @default(now())
   createdAt             DateTime               @default(now())
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/database
   applications          LeaveApplication[]
   quarterlyEntitlements QuarterlyEntitlement[]
 
@@ -40,18 +52,31 @@ model LeaveType {
 }
 
 model LeaveApplication {
+<<<<<<< HEAD
   id           String                   @id @default(cuid())
+=======
+  id           String       @id @default(cuid())
+>>>>>>> origin/database
   userId       String
   leaveTypeId  String
   startDate    DateTime
   endDate      DateTime
   totalDays    Int
   reason       String
+<<<<<<< HEAD
   status       LeaveStatus              @default(PENDING)
   adminRemarks String?
   appliedAt    DateTime                 @default(now())
   leaveType    LeaveType                @relation(fields: [leaveTypeId], references: [id])
   user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+=======
+  status       LeaveStatus  @default(PENDING)
+  adminRemarks String?
+  appliedAt    DateTime     @default(now())
+
+  leaveType    LeaveType    @relation(fields: [leaveTypeId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+>>>>>>> origin/database
   allocations  LeaveRequestAllocation[]
 
   @@index([userId])
@@ -61,6 +86,7 @@ model LeaveApplication {
   @@map("leave_applications")
 }
 
+<<<<<<< HEAD
 model LeaveBalance {
   id          String @id @default(cuid())
   userId      String @unique
@@ -72,6 +98,8 @@ model LeaveBalance {
   @@map("leave_balances")
 }
 
+=======
+>>>>>>> origin/database
 model QuarterlyEntitlement {
   id               String                   @id @default(cuid())
   userId           String
@@ -85,6 +113,10 @@ model QuarterlyEntitlement {
   carryOutDays     Int                      @default(0)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/database
   leaveAllocations LeaveRequestAllocation[]
   leaveType        LeaveType                @relation(fields: [leaveTypeId], references: [id])
   user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -100,6 +132,10 @@ model LeaveRequestAllocation {
   leaveApplicationId     String
   quarterlyEntitlementId String
   allocatedDays          Int
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/database
   leaveApplication       LeaveApplication     @relation(fields: [leaveApplicationId], references: [id], onDelete: Cascade)
   entitlement            QuarterlyEntitlement @relation(fields: [quarterlyEntitlementId], references: [id])
 
@@ -107,6 +143,7 @@ model LeaveRequestAllocation {
   @@index([quarterlyEntitlementId])
   @@map("leave_request_allocations")
 }
+<<<<<<< HEAD
   model EmployeeCodeCounter {
   role  UserRole @id
   value Int      @default(0)
@@ -141,6 +178,8 @@ model AdminRegistrationRequest {
   @@index([status])
   @@map("admin_registration_requests")
 }
+=======
+>>>>>>> origin/database
 
 enum UserRole {
   EMPLOYEE
@@ -152,9 +191,13 @@ enum LeaveStatus {
   APPROVED
   REJECTED
   CANCELLED
+<<<<<<< HEAD
 }
 enum AdminRequestStatus {
   PENDING
   APPROVED
   REJECTED
 }
+=======
+}
+>>>>>>> origin/database
