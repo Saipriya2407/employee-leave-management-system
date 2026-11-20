@@ -166,4 +166,15 @@ enum AdminRequestStatus {
   PENDING
   APPROVED
   REJECTED
+  }
+
+model PublicHoliday {
+  id          String   @id @default(cuid())
+  name        String
+  date        DateTime
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([date])
+  @@map("public_holidays")
 }
