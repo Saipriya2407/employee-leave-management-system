@@ -12,7 +12,6 @@ export default function AdminHolidaysPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  // Requests go through the Next.js proxy to the Render backend
   const API = "/api/backend/admin/holidays";
 
   async function handleResponse(response) {
@@ -144,6 +143,16 @@ export default function AdminHolidaysPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-5xl">
 
+        {/* Back Button */}
+        <button
+          type="button"
+          onClick={() => (window.location.href = "/admin/dashboard")}
+          className="mb-5 flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 shadow-sm transition hover:bg-gray-100"
+        >
+          <span>←</span>
+          Back to Dashboard
+        </button>
+
         <h1 className="mb-2 text-3xl font-bold text-gray-800">
           Leave Creation
         </h1>
@@ -165,7 +174,6 @@ export default function AdminHolidaysPage() {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-
             <div>
               <label className="mb-1 block font-medium text-gray-700">
                 Holiday Name
