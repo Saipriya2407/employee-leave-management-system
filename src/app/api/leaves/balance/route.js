@@ -1,3 +1,5 @@
+
+
 import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import {
@@ -10,10 +12,23 @@ import {
   calculateAvailableBalance,
 } from "@/lib/quarterly-policy";
 
+async function runWithRetry(operation, maxAttempts = 3) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error.code !== "P2034" || attempt === maxAttempts) {
+        throw error;
+      }
+
+      console.warn(`Balance transaction conflict. Retry ${attempt}/${maxAttempts}`);
+      await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+    }
+  }
+}
 
 export async function GET(request) {
   try {
-    // Verify login
     const auth = await requireAuth(request);
 
     if (!auth.authorized) {
@@ -25,7 +40,6 @@ export async function GET(request) {
 
     let userId = auth.user.id;
 
-    // Only Admin can view another employee's balance
     if (requestedUserId && requestedUserId !== auth.user.id) {
       if (auth.user.role !== "ADMIN") {
         return errorResponse(
@@ -37,7 +51,6 @@ export async function GET(request) {
       userId = requestedUserId;
     }
 
-    // Verify employee exists
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -50,13 +63,14 @@ export async function GET(request) {
       return errorResponse("Employee not found.", 404);
     }
 
-    // Get current quarter
     const { year, quarter } = getQuarterFromDate(new Date());
 
-    // Get active leave types
     const leaveTypes = await prisma.leaveType.findMany({
       where: {
         isActive: true,
+        code: {
+          in: ["CASUAL", "SICK", "WFH"],
+        },
         effectiveFrom: {
           lte: new Date(),
         },
@@ -66,42 +80,78 @@ export async function GET(request) {
       },
     });
 
-    // Retrieve or create quarterly entitlements
-    const balances = await prisma.$transaction(
-      async (tx) => {
-        const result = [];
+    const balances = await runWithRetry(() =>
+      prisma.$transaction(
+        async (tx) => {
+          const result = [];
 
-        for (const leaveType of leaveTypes) {
-          const entitlement =
-            await getOrCreateQuarterlyEntitlement(
-              tx,
-              userId,
-              leaveType,
+          const summary = {
+            casualLeave: 0,
+            sickLeave: 0,
+            workFromHome: 0,
+          };
+
+          for (const leaveType of leaveTypes) {
+            const entitlement =
+              await getOrCreateQuarterlyEntitlement(
+                tx,
+                userId,
+                leaveType,
+                year,
+                quarter
+              );
+
+            const calculated =
+              calculateAvailableBalance(entitlement);
+
+            result.push({
+              leaveTypeId: leaveType.id,
+              name: leaveType.name,
+              code: leaveType.code,
+              annualQuota: leaveType.annualQuota,
+              quarterlyQuota: leaveType.quarterlyQuota,
+              carryForwardAllowed: leaveType.carryForwardAllowed,
               year,
-              quarter
-            );
+              quarter,
+              ...calculated,
+            });
 
-          result.push({
-            leaveTypeId: leaveType.id,
-            name: leaveType.name,
-            code: leaveType.code,
-            annualQuota: leaveType.annualQuota,
-            quarterlyQuota: leaveType.quarterlyQuota,
-            carryForwardAllowed:
-              leaveType.carryForwardAllowed,
-            year,
-            quarter,
-            ...calculateAvailableBalance(entitlement),
+            if (leaveType.code === "CASUAL") {
+              summary.casualLeave = calculated.available;
+            }
+
+            if (leaveType.code === "SICK") {
+              summary.sickLeave = calculated.available;
+            }
+
+            if (leaveType.code === "WFH") {
+              summary.workFromHome = calculated.available;
+            }
+          }
+
+          await tx.leaveBalance.upsert({
+            where: { userId },
+            update: {
+              casualLeave: summary.casualLeave,
+              sickLeave: summary.sickLeave,
+              workFromHome: summary.workFromHome,
+            },
+            create: {
+              userId,
+              casualLeave: summary.casualLeave,
+              sickLeave: summary.sickLeave,
+              workFromHome: summary.workFromHome,
+            },
           });
-        }
 
-        return result;
-      },
-      {
-        isolationLevel: "Serializable",
-        maxWait: 10000,
-        timeout: 20000,
-      }
+          return result;
+        },
+        {
+          isolationLevel: "Serializable",
+          maxWait: 10000,
+          timeout: 20000,
+        }
+      )
     );
 
     return successResponse(
@@ -114,13 +164,12 @@ export async function GET(request) {
       "Quarterly leave balances retrieved successfully.",
       200
     );
-
   } catch (error) {
     console.error("Get Leave Balance Error:", error);
 
     if (error.code === "P2034") {
       return errorResponse(
-        "Concurrent update detected. Please try again.",
+        "Unable to update leave balances because of simultaneous requests. Please try again.",
         409
       );
     }
