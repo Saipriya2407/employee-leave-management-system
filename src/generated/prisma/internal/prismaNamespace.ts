@@ -402,7 +402,11 @@ export const ModelName = {
   LeaveApplication: 'LeaveApplication',
   LeaveBalance: 'LeaveBalance',
   QuarterlyEntitlement: 'QuarterlyEntitlement',
-  LeaveRequestAllocation: 'LeaveRequestAllocation'
+  LeaveRequestAllocation: 'LeaveRequestAllocation',
+  EmployeeCodeCounter: 'EmployeeCodeCounter',
+  PasswordResetToken: 'PasswordResetToken',
+  AdminRegistrationRequest: 'AdminRegistrationRequest',
+  PublicHoliday: 'PublicHoliday'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -418,7 +422,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "leaveType" | "leaveApplication" | "leaveBalance" | "quarterlyEntitlement" | "leaveRequestAllocation"
+    modelProps: "user" | "leaveType" | "leaveApplication" | "leaveBalance" | "quarterlyEntitlement" | "leaveRequestAllocation" | "employeeCodeCounter" | "passwordResetToken" | "adminRegistrationRequest" | "publicHoliday"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -866,6 +870,302 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    EmployeeCodeCounter: {
+      payload: Prisma.$EmployeeCodeCounterPayload<ExtArgs>
+      fields: Prisma.EmployeeCodeCounterFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EmployeeCodeCounterFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EmployeeCodeCounterFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>
+        }
+        findFirst: {
+          args: Prisma.EmployeeCodeCounterFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EmployeeCodeCounterFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>
+        }
+        findMany: {
+          args: Prisma.EmployeeCodeCounterFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>[]
+        }
+        create: {
+          args: Prisma.EmployeeCodeCounterCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>
+        }
+        createMany: {
+          args: Prisma.EmployeeCodeCounterCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EmployeeCodeCounterCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>[]
+        }
+        delete: {
+          args: Prisma.EmployeeCodeCounterDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>
+        }
+        update: {
+          args: Prisma.EmployeeCodeCounterUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>
+        }
+        deleteMany: {
+          args: Prisma.EmployeeCodeCounterDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EmployeeCodeCounterUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EmployeeCodeCounterUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>[]
+        }
+        upsert: {
+          args: Prisma.EmployeeCodeCounterUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmployeeCodeCounterPayload>
+        }
+        aggregate: {
+          args: Prisma.EmployeeCodeCounterAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEmployeeCodeCounter>
+        }
+        groupBy: {
+          args: Prisma.EmployeeCodeCounterGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmployeeCodeCounterGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EmployeeCodeCounterCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmployeeCodeCounterCountAggregateOutputType> | number
+        }
+      }
+    }
+    PasswordResetToken: {
+      payload: Prisma.$PasswordResetTokenPayload<ExtArgs>
+      fields: Prisma.PasswordResetTokenFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PasswordResetTokenFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PasswordResetTokenFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        findFirst: {
+          args: Prisma.PasswordResetTokenFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PasswordResetTokenFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        findMany: {
+          args: Prisma.PasswordResetTokenFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>[]
+        }
+        create: {
+          args: Prisma.PasswordResetTokenCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        createMany: {
+          args: Prisma.PasswordResetTokenCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PasswordResetTokenCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>[]
+        }
+        delete: {
+          args: Prisma.PasswordResetTokenDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        update: {
+          args: Prisma.PasswordResetTokenUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        deleteMany: {
+          args: Prisma.PasswordResetTokenDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PasswordResetTokenUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PasswordResetTokenUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>[]
+        }
+        upsert: {
+          args: Prisma.PasswordResetTokenUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PasswordResetTokenPayload>
+        }
+        aggregate: {
+          args: Prisma.PasswordResetTokenAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePasswordResetToken>
+        }
+        groupBy: {
+          args: Prisma.PasswordResetTokenGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PasswordResetTokenGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PasswordResetTokenCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PasswordResetTokenCountAggregateOutputType> | number
+        }
+      }
+    }
+    AdminRegistrationRequest: {
+      payload: Prisma.$AdminRegistrationRequestPayload<ExtArgs>
+      fields: Prisma.AdminRegistrationRequestFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AdminRegistrationRequestFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AdminRegistrationRequestFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>
+        }
+        findFirst: {
+          args: Prisma.AdminRegistrationRequestFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AdminRegistrationRequestFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>
+        }
+        findMany: {
+          args: Prisma.AdminRegistrationRequestFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>[]
+        }
+        create: {
+          args: Prisma.AdminRegistrationRequestCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>
+        }
+        createMany: {
+          args: Prisma.AdminRegistrationRequestCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AdminRegistrationRequestCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>[]
+        }
+        delete: {
+          args: Prisma.AdminRegistrationRequestDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>
+        }
+        update: {
+          args: Prisma.AdminRegistrationRequestUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>
+        }
+        deleteMany: {
+          args: Prisma.AdminRegistrationRequestDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AdminRegistrationRequestUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AdminRegistrationRequestUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>[]
+        }
+        upsert: {
+          args: Prisma.AdminRegistrationRequestUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminRegistrationRequestPayload>
+        }
+        aggregate: {
+          args: Prisma.AdminRegistrationRequestAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAdminRegistrationRequest>
+        }
+        groupBy: {
+          args: Prisma.AdminRegistrationRequestGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdminRegistrationRequestGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AdminRegistrationRequestCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdminRegistrationRequestCountAggregateOutputType> | number
+        }
+      }
+    }
+    PublicHoliday: {
+      payload: Prisma.$PublicHolidayPayload<ExtArgs>
+      fields: Prisma.PublicHolidayFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PublicHolidayFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PublicHolidayFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>
+        }
+        findFirst: {
+          args: Prisma.PublicHolidayFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PublicHolidayFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>
+        }
+        findMany: {
+          args: Prisma.PublicHolidayFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>[]
+        }
+        create: {
+          args: Prisma.PublicHolidayCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>
+        }
+        createMany: {
+          args: Prisma.PublicHolidayCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PublicHolidayCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>[]
+        }
+        delete: {
+          args: Prisma.PublicHolidayDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>
+        }
+        update: {
+          args: Prisma.PublicHolidayUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>
+        }
+        deleteMany: {
+          args: Prisma.PublicHolidayDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PublicHolidayUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PublicHolidayUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>[]
+        }
+        upsert: {
+          args: Prisma.PublicHolidayUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PublicHolidayPayload>
+        }
+        aggregate: {
+          args: Prisma.PublicHolidayAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePublicHoliday>
+        }
+        groupBy: {
+          args: Prisma.PublicHolidayGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PublicHolidayGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PublicHolidayCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PublicHolidayCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -907,6 +1207,7 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 
 export const UserScalarFieldEnum = {
   id: 'id',
+  employeeCode: 'employeeCode',
   fullName: 'fullName',
   email: 'email',
   password: 'password',
@@ -954,7 +1255,7 @@ export const LeaveBalanceScalarFieldEnum = {
   userId: 'userId',
   casualLeave: 'casualLeave',
   sickLeave: 'sickLeave',
-  earnedLeave: 'earnedLeave'
+  workFromHome: 'workFromHome'
 } as const
 
 export type LeaveBalanceScalarFieldEnum = (typeof LeaveBalanceScalarFieldEnum)[keyof typeof LeaveBalanceScalarFieldEnum]
@@ -986,6 +1287,54 @@ export const LeaveRequestAllocationScalarFieldEnum = {
 } as const
 
 export type LeaveRequestAllocationScalarFieldEnum = (typeof LeaveRequestAllocationScalarFieldEnum)[keyof typeof LeaveRequestAllocationScalarFieldEnum]
+
+
+export const EmployeeCodeCounterScalarFieldEnum = {
+  role: 'role',
+  value: 'value'
+} as const
+
+export type EmployeeCodeCounterScalarFieldEnum = (typeof EmployeeCodeCounterScalarFieldEnum)[keyof typeof EmployeeCodeCounterScalarFieldEnum]
+
+
+export const PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
+
+
+export const AdminRegistrationRequestScalarFieldEnum = {
+  id: 'id',
+  fullName: 'fullName',
+  email: 'email',
+  password: 'password',
+  department: 'department',
+  status: 'status',
+  reviewedById: 'reviewedById',
+  reviewedAt: 'reviewedAt',
+  adminRemarks: 'adminRemarks',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdminRegistrationRequestScalarFieldEnum = (typeof AdminRegistrationRequestScalarFieldEnum)[keyof typeof AdminRegistrationRequestScalarFieldEnum]
+
+
+export const PublicHolidayScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  date: 'date',
+  description: 'description',
+  createdAt: 'createdAt'
+} as const
+
+export type PublicHolidayScalarFieldEnum = (typeof PublicHolidayScalarFieldEnum)[keyof typeof PublicHolidayScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1092,6 +1441,20 @@ export type EnumLeaveStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Pris
  * Reference to a field of type 'LeaveStatus[]'
  */
 export type ListEnumLeaveStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeaveStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'AdminRequestStatus'
+ */
+export type EnumAdminRequestStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AdminRequestStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'AdminRequestStatus[]'
+ */
+export type ListEnumAdminRequestStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AdminRequestStatus[]'>
     
 
 
@@ -1265,6 +1628,10 @@ export type GlobalOmitConfig = {
   leaveBalance?: Prisma.LeaveBalanceOmit
   quarterlyEntitlement?: Prisma.QuarterlyEntitlementOmit
   leaveRequestAllocation?: Prisma.LeaveRequestAllocationOmit
+  employeeCodeCounter?: Prisma.EmployeeCodeCounterOmit
+  passwordResetToken?: Prisma.PasswordResetTokenOmit
+  adminRegistrationRequest?: Prisma.AdminRegistrationRequestOmit
+  publicHoliday?: Prisma.PublicHolidayOmit
 }
 
 /* Types for Logging */

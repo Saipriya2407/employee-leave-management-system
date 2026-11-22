@@ -71,3 +71,23 @@ export type QuarterlyEntitlement = Prisma.QuarterlyEntitlementModel
  * 
  */
 export type LeaveRequestAllocation = Prisma.LeaveRequestAllocationModel
+/**
+ * Model EmployeeCodeCounter
+ * 
+ */
+export type EmployeeCodeCounter = Prisma.EmployeeCodeCounterModel
+/**
+ * Model PasswordResetToken
+ * 
+ */
+export type PasswordResetToken = Prisma.PasswordResetTokenModel
+/**
+ * Model AdminRegistrationRequest
+ * 
+ */
+export type AdminRegistrationRequest = Prisma.AdminRegistrationRequestModel
+/**
+ * Model PublicHoliday
+ * 
+ */
+export type PublicHoliday = Prisma.PublicHolidayModel

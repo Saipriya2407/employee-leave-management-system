@@ -69,7 +69,7 @@ model LeaveBalance {
   userId      String @unique
   casualLeave Int    @default(0)
   sickLeave   Int    @default(0)
-  earnedLeave Int    @default(0)
+  workFromHome Int    @default(0)
 
   user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 

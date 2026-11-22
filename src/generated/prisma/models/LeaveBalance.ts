@@ -29,13 +29,13 @@ export type AggregateLeaveBalance = {
 export type LeaveBalanceAvgAggregateOutputType = {
   casualLeave: number | null
   sickLeave: number | null
-  earnedLeave: number | null
+  workFromHome: number | null
 }
 
 export type LeaveBalanceSumAggregateOutputType = {
   casualLeave: number | null
   sickLeave: number | null
-  earnedLeave: number | null
+  workFromHome: number | null
 }
 
 export type LeaveBalanceMinAggregateOutputType = {
@@ -43,7 +43,7 @@ export type LeaveBalanceMinAggregateOutputType = {
   userId: string | null
   casualLeave: number | null
   sickLeave: number | null
-  earnedLeave: number | null
+  workFromHome: number | null
 }
 
 export type LeaveBalanceMaxAggregateOutputType = {
@@ -51,7 +51,7 @@ export type LeaveBalanceMaxAggregateOutputType = {
   userId: string | null
   casualLeave: number | null
   sickLeave: number | null
-  earnedLeave: number | null
+  workFromHome: number | null
 }
 
 export type LeaveBalanceCountAggregateOutputType = {
@@ -59,7 +59,7 @@ export type LeaveBalanceCountAggregateOutputType = {
   userId: number
   casualLeave: number
   sickLeave: number
-  earnedLeave: number
+  workFromHome: number
   _all: number
 }
 
@@ -67,13 +67,13 @@ export type LeaveBalanceCountAggregateOutputType = {
 export type LeaveBalanceAvgAggregateInputType = {
   casualLeave?: true
   sickLeave?: true
-  earnedLeave?: true
+  workFromHome?: true
 }
 
 export type LeaveBalanceSumAggregateInputType = {
   casualLeave?: true
   sickLeave?: true
-  earnedLeave?: true
+  workFromHome?: true
 }
 
 export type LeaveBalanceMinAggregateInputType = {
@@ -81,7 +81,7 @@ export type LeaveBalanceMinAggregateInputType = {
   userId?: true
   casualLeave?: true
   sickLeave?: true
-  earnedLeave?: true
+  workFromHome?: true
 }
 
 export type LeaveBalanceMaxAggregateInputType = {
@@ -89,7 +89,7 @@ export type LeaveBalanceMaxAggregateInputType = {
   userId?: true
   casualLeave?: true
   sickLeave?: true
-  earnedLeave?: true
+  workFromHome?: true
 }
 
 export type LeaveBalanceCountAggregateInputType = {
@@ -97,7 +97,7 @@ export type LeaveBalanceCountAggregateInputType = {
   userId?: true
   casualLeave?: true
   sickLeave?: true
-  earnedLeave?: true
+  workFromHome?: true
   _all?: true
 }
 
@@ -192,7 +192,7 @@ export type LeaveBalanceGroupByOutputType = {
   userId: string
   casualLeave: number
   sickLeave: number
-  earnedLeave: number
+  workFromHome: number
   _count: LeaveBalanceCountAggregateOutputType | null
   _avg: LeaveBalanceAvgAggregateOutputType | null
   _sum: LeaveBalanceSumAggregateOutputType | null
@@ -223,7 +223,7 @@ export type LeaveBalanceWhereInput = {
   userId?: Prisma.StringFilter<"LeaveBalance"> | string
   casualLeave?: Prisma.IntFilter<"LeaveBalance"> | number
   sickLeave?: Prisma.IntFilter<"LeaveBalance"> | number
-  earnedLeave?: Prisma.IntFilter<"LeaveBalance"> | number
+  workFromHome?: Prisma.IntFilter<"LeaveBalance"> | number
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
 
@@ -232,7 +232,7 @@ export type LeaveBalanceOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   casualLeave?: Prisma.SortOrder
   sickLeave?: Prisma.SortOrder
-  earnedLeave?: Prisma.SortOrder
+  workFromHome?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
 }
 
@@ -244,7 +244,7 @@ export type LeaveBalanceWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.LeaveBalanceWhereInput | Prisma.LeaveBalanceWhereInput[]
   casualLeave?: Prisma.IntFilter<"LeaveBalance"> | number
   sickLeave?: Prisma.IntFilter<"LeaveBalance"> | number
-  earnedLeave?: Prisma.IntFilter<"LeaveBalance"> | number
+  workFromHome?: Prisma.IntFilter<"LeaveBalance"> | number
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "id" | "userId">
 
@@ -253,7 +253,7 @@ export type LeaveBalanceOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   casualLeave?: Prisma.SortOrder
   sickLeave?: Prisma.SortOrder
-  earnedLeave?: Prisma.SortOrder
+  workFromHome?: Prisma.SortOrder
   _count?: Prisma.LeaveBalanceCountOrderByAggregateInput
   _avg?: Prisma.LeaveBalanceAvgOrderByAggregateInput
   _max?: Prisma.LeaveBalanceMaxOrderByAggregateInput
@@ -269,14 +269,14 @@ export type LeaveBalanceScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"LeaveBalance"> | string
   casualLeave?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
   sickLeave?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
-  earnedLeave?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
+  workFromHome?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
 }
 
 export type LeaveBalanceCreateInput = {
   id?: string
   casualLeave?: number
   sickLeave?: number
-  earnedLeave?: number
+  workFromHome?: number
   user: Prisma.UserCreateNestedOneWithoutLeaveBalanceInput
 }
 
@@ -285,14 +285,14 @@ export type LeaveBalanceUncheckedCreateInput = {
   userId: string
   casualLeave?: number
   sickLeave?: number
-  earnedLeave?: number
+  workFromHome?: number
 }
 
 export type LeaveBalanceUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   casualLeave?: Prisma.IntFieldUpdateOperationsInput | number
   sickLeave?: Prisma.IntFieldUpdateOperationsInput | number
-  earnedLeave?: Prisma.IntFieldUpdateOperationsInput | number
+  workFromHome?: Prisma.IntFieldUpdateOperationsInput | number
   user?: Prisma.UserUpdateOneRequiredWithoutLeaveBalanceNestedInput
 }
 
@@ -301,7 +301,7 @@ export type LeaveBalanceUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   casualLeave?: Prisma.IntFieldUpdateOperationsInput | number
   sickLeave?: Prisma.IntFieldUpdateOperationsInput | number
-  earnedLeave?: Prisma.IntFieldUpdateOperationsInput | number
+  workFromHome?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type LeaveBalanceCreateManyInput = {
@@ -309,14 +309,14 @@ export type LeaveBalanceCreateManyInput = {
   userId: string
   casualLeave?: number
   sickLeave?: number
-  earnedLeave?: number
+  workFromHome?: number
 }
 
 export type LeaveBalanceUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   casualLeave?: Prisma.IntFieldUpdateOperationsInput | number
   sickLeave?: Prisma.IntFieldUpdateOperationsInput | number
-  earnedLeave?: Prisma.IntFieldUpdateOperationsInput | number
+  workFromHome?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type LeaveBalanceUncheckedUpdateManyInput = {
@@ -324,7 +324,7 @@ export type LeaveBalanceUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   casualLeave?: Prisma.IntFieldUpdateOperationsInput | number
   sickLeave?: Prisma.IntFieldUpdateOperationsInput | number
-  earnedLeave?: Prisma.IntFieldUpdateOperationsInput | number
+  workFromHome?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type LeaveBalanceNullableScalarRelationFilter = {
@@ -337,13 +337,13 @@ export type LeaveBalanceCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   casualLeave?: Prisma.SortOrder
   sickLeave?: Prisma.SortOrder
-  earnedLeave?: Prisma.SortOrder
+  workFromHome?: Prisma.SortOrder
 }
 
 export type LeaveBalanceAvgOrderByAggregateInput = {
   casualLeave?: Prisma.SortOrder
   sickLeave?: Prisma.SortOrder
-  earnedLeave?: Prisma.SortOrder
+  workFromHome?: Prisma.SortOrder
 }
 
 export type LeaveBalanceMaxOrderByAggregateInput = {
@@ -351,7 +351,7 @@ export type LeaveBalanceMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   casualLeave?: Prisma.SortOrder
   sickLeave?: Prisma.SortOrder
-  earnedLeave?: Prisma.SortOrder
+  workFromHome?: Prisma.SortOrder
 }
 
 export type LeaveBalanceMinOrderByAggregateInput = {
@@ -359,13 +359,13 @@ export type LeaveBalanceMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   casualLeave?: Prisma.SortOrder
   sickLeave?: Prisma.SortOrder
-  earnedLeave?: Prisma.SortOrder
+  workFromHome?: Prisma.SortOrder
 }
 
 export type LeaveBalanceSumOrderByAggregateInput = {
   casualLeave?: Prisma.SortOrder
   sickLeave?: Prisma.SortOrder
-  earnedLeave?: Prisma.SortOrder
+  workFromHome?: Prisma.SortOrder
 }
 
 export type LeaveBalanceCreateNestedOneWithoutUserInput = {
@@ -404,14 +404,14 @@ export type LeaveBalanceCreateWithoutUserInput = {
   id?: string
   casualLeave?: number
   sickLeave?: number
-  earnedLeave?: number
+  workFromHome?: number
 }
 
 export type LeaveBalanceUncheckedCreateWithoutUserInput = {
   id?: string
   casualLeave?: number
   sickLeave?: number
-  earnedLeave?: number
+  workFromHome?: number
 }
 
 export type LeaveBalanceCreateOrConnectWithoutUserInput = {
@@ -434,14 +434,14 @@ export type LeaveBalanceUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   casualLeave?: Prisma.IntFieldUpdateOperationsInput | number
   sickLeave?: Prisma.IntFieldUpdateOperationsInput | number
-  earnedLeave?: Prisma.IntFieldUpdateOperationsInput | number
+  workFromHome?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type LeaveBalanceUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   casualLeave?: Prisma.IntFieldUpdateOperationsInput | number
   sickLeave?: Prisma.IntFieldUpdateOperationsInput | number
-  earnedLeave?: Prisma.IntFieldUpdateOperationsInput | number
+  workFromHome?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 
@@ -451,7 +451,7 @@ export type LeaveBalanceSelect<ExtArgs extends runtime.Types.Extensions.Internal
   userId?: boolean
   casualLeave?: boolean
   sickLeave?: boolean
-  earnedLeave?: boolean
+  workFromHome?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["leaveBalance"]>
 
@@ -460,7 +460,7 @@ export type LeaveBalanceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   userId?: boolean
   casualLeave?: boolean
   sickLeave?: boolean
-  earnedLeave?: boolean
+  workFromHome?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["leaveBalance"]>
 
@@ -469,7 +469,7 @@ export type LeaveBalanceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   userId?: boolean
   casualLeave?: boolean
   sickLeave?: boolean
-  earnedLeave?: boolean
+  workFromHome?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["leaveBalance"]>
 
@@ -478,10 +478,10 @@ export type LeaveBalanceSelectScalar = {
   userId?: boolean
   casualLeave?: boolean
   sickLeave?: boolean
-  earnedLeave?: boolean
+  workFromHome?: boolean
 }
 
-export type LeaveBalanceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "casualLeave" | "sickLeave" | "earnedLeave", ExtArgs["result"]["leaveBalance"]>
+export type LeaveBalanceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "casualLeave" | "sickLeave" | "workFromHome", ExtArgs["result"]["leaveBalance"]>
 export type LeaveBalanceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -502,7 +502,7 @@ export type $LeaveBalancePayload<ExtArgs extends runtime.Types.Extensions.Intern
     userId: string
     casualLeave: number
     sickLeave: number
-    earnedLeave: number
+    workFromHome: number
   }, ExtArgs["result"]["leaveBalance"]>
   composites: {}
 }
@@ -931,7 +931,7 @@ export interface LeaveBalanceFieldRefs {
   readonly userId: Prisma.FieldRef<"LeaveBalance", 'String'>
   readonly casualLeave: Prisma.FieldRef<"LeaveBalance", 'Int'>
   readonly sickLeave: Prisma.FieldRef<"LeaveBalance", 'Int'>
-  readonly earnedLeave: Prisma.FieldRef<"LeaveBalance", 'Int'>
+  readonly workFromHome: Prisma.FieldRef<"LeaveBalance", 'Int'>
 }
     
 

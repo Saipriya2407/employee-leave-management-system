@@ -56,7 +56,11 @@ export const ModelName = {
   LeaveApplication: 'LeaveApplication',
   LeaveBalance: 'LeaveBalance',
   QuarterlyEntitlement: 'QuarterlyEntitlement',
-  LeaveRequestAllocation: 'LeaveRequestAllocation'
+  LeaveRequestAllocation: 'LeaveRequestAllocation',
+  EmployeeCodeCounter: 'EmployeeCodeCounter',
+  PasswordResetToken: 'PasswordResetToken',
+  AdminRegistrationRequest: 'AdminRegistrationRequest',
+  PublicHoliday: 'PublicHoliday'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -77,6 +81,7 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 
 export const UserScalarFieldEnum = {
   id: 'id',
+  employeeCode: 'employeeCode',
   fullName: 'fullName',
   email: 'email',
   password: 'password',
@@ -124,7 +129,7 @@ export const LeaveBalanceScalarFieldEnum = {
   userId: 'userId',
   casualLeave: 'casualLeave',
   sickLeave: 'sickLeave',
-  earnedLeave: 'earnedLeave'
+  workFromHome: 'workFromHome'
 } as const
 
 export type LeaveBalanceScalarFieldEnum = (typeof LeaveBalanceScalarFieldEnum)[keyof typeof LeaveBalanceScalarFieldEnum]
@@ -156,6 +161,54 @@ export const LeaveRequestAllocationScalarFieldEnum = {
 } as const
 
 export type LeaveRequestAllocationScalarFieldEnum = (typeof LeaveRequestAllocationScalarFieldEnum)[keyof typeof LeaveRequestAllocationScalarFieldEnum]
+
+
+export const EmployeeCodeCounterScalarFieldEnum = {
+  role: 'role',
+  value: 'value'
+} as const
+
+export type EmployeeCodeCounterScalarFieldEnum = (typeof EmployeeCodeCounterScalarFieldEnum)[keyof typeof EmployeeCodeCounterScalarFieldEnum]
+
+
+export const PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
+
+
+export const AdminRegistrationRequestScalarFieldEnum = {
+  id: 'id',
+  fullName: 'fullName',
+  email: 'email',
+  password: 'password',
+  department: 'department',
+  status: 'status',
+  reviewedById: 'reviewedById',
+  reviewedAt: 'reviewedAt',
+  adminRemarks: 'adminRemarks',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdminRegistrationRequestScalarFieldEnum = (typeof AdminRegistrationRequestScalarFieldEnum)[keyof typeof AdminRegistrationRequestScalarFieldEnum]
+
+
+export const PublicHolidayScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  date: 'date',
+  description: 'description',
+  createdAt: 'createdAt'
+} as const
+
+export type PublicHolidayScalarFieldEnum = (typeof PublicHolidayScalarFieldEnum)[keyof typeof PublicHolidayScalarFieldEnum]
 
 
 export const SortOrder = {

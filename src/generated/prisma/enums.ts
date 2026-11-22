@@ -25,3 +25,12 @@ export const LeaveStatus = {
 } as const
 
 export type LeaveStatus = (typeof LeaveStatus)[keyof typeof LeaveStatus]
+
+
+export const AdminRequestStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type AdminRequestStatus = (typeof AdminRequestStatus)[keyof typeof AdminRequestStatus]

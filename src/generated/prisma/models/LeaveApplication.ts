@@ -256,8 +256,8 @@ export type LeaveApplicationWhereInput = {
   status?: Prisma.EnumLeaveStatusFilter<"LeaveApplication"> | $Enums.LeaveStatus
   adminRemarks?: Prisma.StringNullableFilter<"LeaveApplication"> | string | null
   appliedAt?: Prisma.DateTimeFilter<"LeaveApplication"> | Date | string
-  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   leaveType?: Prisma.XOR<Prisma.LeaveTypeScalarRelationFilter, Prisma.LeaveTypeWhereInput>
+  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   allocations?: Prisma.LeaveRequestAllocationListRelationFilter
 }
 
@@ -272,8 +272,8 @@ export type LeaveApplicationOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   adminRemarks?: Prisma.SortOrderInput | Prisma.SortOrder
   appliedAt?: Prisma.SortOrder
-  user?: Prisma.UserOrderByWithRelationInput
   leaveType?: Prisma.LeaveTypeOrderByWithRelationInput
+  user?: Prisma.UserOrderByWithRelationInput
   allocations?: Prisma.LeaveRequestAllocationOrderByRelationAggregateInput
 }
 
@@ -291,8 +291,8 @@ export type LeaveApplicationWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumLeaveStatusFilter<"LeaveApplication"> | $Enums.LeaveStatus
   adminRemarks?: Prisma.StringNullableFilter<"LeaveApplication"> | string | null
   appliedAt?: Prisma.DateTimeFilter<"LeaveApplication"> | Date | string
-  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   leaveType?: Prisma.XOR<Prisma.LeaveTypeScalarRelationFilter, Prisma.LeaveTypeWhereInput>
+  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   allocations?: Prisma.LeaveRequestAllocationListRelationFilter
 }, "id">
 
@@ -339,8 +339,8 @@ export type LeaveApplicationCreateInput = {
   status?: $Enums.LeaveStatus
   adminRemarks?: string | null
   appliedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutLeaveApplicationsInput
   leaveType: Prisma.LeaveTypeCreateNestedOneWithoutApplicationsInput
+  user: Prisma.UserCreateNestedOneWithoutLeaveApplicationsInput
   allocations?: Prisma.LeaveRequestAllocationCreateNestedManyWithoutLeaveApplicationInput
 }
 
@@ -367,8 +367,8 @@ export type LeaveApplicationUpdateInput = {
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   adminRemarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   appliedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutLeaveApplicationsNestedInput
   leaveType?: Prisma.LeaveTypeUpdateOneRequiredWithoutApplicationsNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutLeaveApplicationsNestedInput
   allocations?: Prisma.LeaveRequestAllocationUpdateManyWithoutLeaveApplicationNestedInput
 }
 
@@ -573,10 +573,6 @@ export type EnumLeaveStatusFieldUpdateOperationsInput = {
   set?: $Enums.LeaveStatus
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type LeaveApplicationCreateNestedOneWithoutAllocationsInput = {
   create?: Prisma.XOR<Prisma.LeaveApplicationCreateWithoutAllocationsInput, Prisma.LeaveApplicationUncheckedCreateWithoutAllocationsInput>
   connectOrCreate?: Prisma.LeaveApplicationCreateOrConnectWithoutAllocationsInput
@@ -720,8 +716,8 @@ export type LeaveApplicationCreateWithoutAllocationsInput = {
   status?: $Enums.LeaveStatus
   adminRemarks?: string | null
   appliedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutLeaveApplicationsInput
   leaveType: Prisma.LeaveTypeCreateNestedOneWithoutApplicationsInput
+  user: Prisma.UserCreateNestedOneWithoutLeaveApplicationsInput
 }
 
 export type LeaveApplicationUncheckedCreateWithoutAllocationsInput = {
@@ -762,8 +758,8 @@ export type LeaveApplicationUpdateWithoutAllocationsInput = {
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   adminRemarks?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   appliedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutLeaveApplicationsNestedInput
   leaveType?: Prisma.LeaveTypeUpdateOneRequiredWithoutApplicationsNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutLeaveApplicationsNestedInput
 }
 
 export type LeaveApplicationUncheckedUpdateWithoutAllocationsInput = {
@@ -921,8 +917,8 @@ export type LeaveApplicationSelect<ExtArgs extends runtime.Types.Extensions.Inte
   status?: boolean
   adminRemarks?: boolean
   appliedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   allocations?: boolean | Prisma.LeaveApplication$allocationsArgs<ExtArgs>
   _count?: boolean | Prisma.LeaveApplicationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["leaveApplication"]>
@@ -938,8 +934,8 @@ export type LeaveApplicationSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   status?: boolean
   adminRemarks?: boolean
   appliedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["leaveApplication"]>
 
 export type LeaveApplicationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -953,8 +949,8 @@ export type LeaveApplicationSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   status?: boolean
   adminRemarks?: boolean
   appliedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["leaveApplication"]>
 
 export type LeaveApplicationSelectScalar = {
@@ -972,25 +968,25 @@ export type LeaveApplicationSelectScalar = {
 
 export type LeaveApplicationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "leaveTypeId" | "startDate" | "endDate" | "totalDays" | "reason" | "status" | "adminRemarks" | "appliedAt", ExtArgs["result"]["leaveApplication"]>
 export type LeaveApplicationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   allocations?: boolean | Prisma.LeaveApplication$allocationsArgs<ExtArgs>
   _count?: boolean | Prisma.LeaveApplicationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type LeaveApplicationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 export type LeaveApplicationIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
 export type $LeaveApplicationPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "LeaveApplication"
   objects: {
-    user: Prisma.$UserPayload<ExtArgs>
     leaveType: Prisma.$LeaveTypePayload<ExtArgs>
+    user: Prisma.$UserPayload<ExtArgs>
     allocations: Prisma.$LeaveRequestAllocationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1398,8 +1394,8 @@ readonly fields: LeaveApplicationFieldRefs;
  */
 export interface Prisma__LeaveApplicationClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   leaveType<T extends Prisma.LeaveTypeDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LeaveTypeDefaultArgs<ExtArgs>>): Prisma.Prisma__LeaveTypeClient<runtime.Types.Result.GetResult<Prisma.$LeaveTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   allocations<T extends Prisma.LeaveApplication$allocationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LeaveApplication$allocationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeaveRequestAllocationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.

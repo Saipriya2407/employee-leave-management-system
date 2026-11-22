@@ -296,9 +296,9 @@ export type QuarterlyEntitlementWhereInput = {
   carryOutDays?: Prisma.IntFilter<"QuarterlyEntitlement"> | number
   createdAt?: Prisma.DateTimeFilter<"QuarterlyEntitlement"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"QuarterlyEntitlement"> | Date | string
-  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  leaveType?: Prisma.XOR<Prisma.LeaveTypeScalarRelationFilter, Prisma.LeaveTypeWhereInput>
   leaveAllocations?: Prisma.LeaveRequestAllocationListRelationFilter
+  leaveType?: Prisma.XOR<Prisma.LeaveTypeScalarRelationFilter, Prisma.LeaveTypeWhereInput>
+  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
 
 export type QuarterlyEntitlementOrderByWithRelationInput = {
@@ -314,9 +314,9 @@ export type QuarterlyEntitlementOrderByWithRelationInput = {
   carryOutDays?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-  user?: Prisma.UserOrderByWithRelationInput
-  leaveType?: Prisma.LeaveTypeOrderByWithRelationInput
   leaveAllocations?: Prisma.LeaveRequestAllocationOrderByRelationAggregateInput
+  leaveType?: Prisma.LeaveTypeOrderByWithRelationInput
+  user?: Prisma.UserOrderByWithRelationInput
 }
 
 export type QuarterlyEntitlementWhereUniqueInput = Prisma.AtLeast<{
@@ -336,9 +336,9 @@ export type QuarterlyEntitlementWhereUniqueInput = Prisma.AtLeast<{
   carryOutDays?: Prisma.IntFilter<"QuarterlyEntitlement"> | number
   createdAt?: Prisma.DateTimeFilter<"QuarterlyEntitlement"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"QuarterlyEntitlement"> | Date | string
-  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  leaveType?: Prisma.XOR<Prisma.LeaveTypeScalarRelationFilter, Prisma.LeaveTypeWhereInput>
   leaveAllocations?: Prisma.LeaveRequestAllocationListRelationFilter
+  leaveType?: Prisma.XOR<Prisma.LeaveTypeScalarRelationFilter, Prisma.LeaveTypeWhereInput>
+  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "id" | "userId_year_quarter_leaveTypeId">
 
 export type QuarterlyEntitlementOrderByWithAggregationInput = {
@@ -390,9 +390,9 @@ export type QuarterlyEntitlementCreateInput = {
   carryOutDays?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutQuarterlyEntitlementsInput
-  leaveType: Prisma.LeaveTypeCreateNestedOneWithoutQuarterlyEntitlementsInput
   leaveAllocations?: Prisma.LeaveRequestAllocationCreateNestedManyWithoutEntitlementInput
+  leaveType: Prisma.LeaveTypeCreateNestedOneWithoutQuarterlyEntitlementsInput
+  user: Prisma.UserCreateNestedOneWithoutQuarterlyEntitlementsInput
 }
 
 export type QuarterlyEntitlementUncheckedCreateInput = {
@@ -422,9 +422,9 @@ export type QuarterlyEntitlementUpdateInput = {
   carryOutDays?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
-  leaveType?: Prisma.LeaveTypeUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
   leaveAllocations?: Prisma.LeaveRequestAllocationUpdateManyWithoutEntitlementNestedInput
+  leaveType?: Prisma.LeaveTypeUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
 }
 
 export type QuarterlyEntitlementUncheckedUpdateInput = {
@@ -682,8 +682,8 @@ export type QuarterlyEntitlementCreateWithoutUserInput = {
   carryOutDays?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  leaveType: Prisma.LeaveTypeCreateNestedOneWithoutQuarterlyEntitlementsInput
   leaveAllocations?: Prisma.LeaveRequestAllocationCreateNestedManyWithoutEntitlementInput
+  leaveType: Prisma.LeaveTypeCreateNestedOneWithoutQuarterlyEntitlementsInput
 }
 
 export type QuarterlyEntitlementUncheckedCreateWithoutUserInput = {
@@ -756,8 +756,8 @@ export type QuarterlyEntitlementCreateWithoutLeaveTypeInput = {
   carryOutDays?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutQuarterlyEntitlementsInput
   leaveAllocations?: Prisma.LeaveRequestAllocationCreateNestedManyWithoutEntitlementInput
+  user: Prisma.UserCreateNestedOneWithoutQuarterlyEntitlementsInput
 }
 
 export type QuarterlyEntitlementUncheckedCreateWithoutLeaveTypeInput = {
@@ -812,8 +812,8 @@ export type QuarterlyEntitlementCreateWithoutLeaveAllocationsInput = {
   carryOutDays?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutQuarterlyEntitlementsInput
   leaveType: Prisma.LeaveTypeCreateNestedOneWithoutQuarterlyEntitlementsInput
+  user: Prisma.UserCreateNestedOneWithoutQuarterlyEntitlementsInput
 }
 
 export type QuarterlyEntitlementUncheckedCreateWithoutLeaveAllocationsInput = {
@@ -858,8 +858,8 @@ export type QuarterlyEntitlementUpdateWithoutLeaveAllocationsInput = {
   carryOutDays?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
   leaveType?: Prisma.LeaveTypeUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
 }
 
 export type QuarterlyEntitlementUncheckedUpdateWithoutLeaveAllocationsInput = {
@@ -902,8 +902,8 @@ export type QuarterlyEntitlementUpdateWithoutUserInput = {
   carryOutDays?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  leaveType?: Prisma.LeaveTypeUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
   leaveAllocations?: Prisma.LeaveRequestAllocationUpdateManyWithoutEntitlementNestedInput
+  leaveType?: Prisma.LeaveTypeUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
 }
 
 export type QuarterlyEntitlementUncheckedUpdateWithoutUserInput = {
@@ -960,8 +960,8 @@ export type QuarterlyEntitlementUpdateWithoutLeaveTypeInput = {
   carryOutDays?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
   leaveAllocations?: Prisma.LeaveRequestAllocationUpdateManyWithoutEntitlementNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutQuarterlyEntitlementsNestedInput
 }
 
 export type QuarterlyEntitlementUncheckedUpdateWithoutLeaveTypeInput = {
@@ -1037,9 +1037,9 @@ export type QuarterlyEntitlementSelect<ExtArgs extends runtime.Types.Extensions.
   carryOutDays?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
   leaveAllocations?: boolean | Prisma.QuarterlyEntitlement$leaveAllocationsArgs<ExtArgs>
+  leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   _count?: boolean | Prisma.QuarterlyEntitlementCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["quarterlyEntitlement"]>
 
@@ -1056,8 +1056,8 @@ export type QuarterlyEntitlementSelectCreateManyAndReturn<ExtArgs extends runtim
   carryOutDays?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["quarterlyEntitlement"]>
 
 export type QuarterlyEntitlementSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1073,8 +1073,8 @@ export type QuarterlyEntitlementSelectUpdateManyAndReturn<ExtArgs extends runtim
   carryOutDays?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["quarterlyEntitlement"]>
 
 export type QuarterlyEntitlementSelectScalar = {
@@ -1094,26 +1094,26 @@ export type QuarterlyEntitlementSelectScalar = {
 
 export type QuarterlyEntitlementOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "leaveTypeId" | "year" | "quarter" | "allocatedDays" | "usedDays" | "reservedDays" | "carryInDays" | "carryOutDays" | "createdAt" | "updatedAt", ExtArgs["result"]["quarterlyEntitlement"]>
 export type QuarterlyEntitlementInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
   leaveAllocations?: boolean | Prisma.QuarterlyEntitlement$leaveAllocationsArgs<ExtArgs>
+  leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   _count?: boolean | Prisma.QuarterlyEntitlementCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type QuarterlyEntitlementIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 export type QuarterlyEntitlementIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
 export type $QuarterlyEntitlementPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "QuarterlyEntitlement"
   objects: {
-    user: Prisma.$UserPayload<ExtArgs>
-    leaveType: Prisma.$LeaveTypePayload<ExtArgs>
     leaveAllocations: Prisma.$LeaveRequestAllocationPayload<ExtArgs>[]
+    leaveType: Prisma.$LeaveTypePayload<ExtArgs>
+    user: Prisma.$UserPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1522,9 +1522,9 @@ readonly fields: QuarterlyEntitlementFieldRefs;
  */
 export interface Prisma__QuarterlyEntitlementClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  leaveType<T extends Prisma.LeaveTypeDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LeaveTypeDefaultArgs<ExtArgs>>): Prisma.Prisma__LeaveTypeClient<runtime.Types.Result.GetResult<Prisma.$LeaveTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   leaveAllocations<T extends Prisma.QuarterlyEntitlement$leaveAllocationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.QuarterlyEntitlement$leaveAllocationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeaveRequestAllocationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  leaveType<T extends Prisma.LeaveTypeDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LeaveTypeDefaultArgs<ExtArgs>>): Prisma.Prisma__LeaveTypeClient<runtime.Types.Result.GetResult<Prisma.$LeaveTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
