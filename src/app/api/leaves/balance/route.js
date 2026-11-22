@@ -6,26 +6,7 @@ import {
   successResponse,
   errorResponse,
 } from "@/lib/response";
-import {
-  getQuarterFromDate,
-  getOrCreateQuarterlyEntitlement,
-  calculateAvailableBalance,
-} from "@/lib/quarterly-policy";
-
-async function runWithRetry(operation, maxAttempts = 3) {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      if (error.code !== "P2034" || attempt === maxAttempts) {
-        throw error;
-      }
-
-      console.warn(`Balance transaction conflict. Retry ${attempt}/${maxAttempts}`);
-      await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
-    }
-  }
-}
+import { getQuarterFromDate } from "@/lib/quarterly-policy";
 
 export async function GET(request) {
   try {
@@ -51,108 +32,124 @@ export async function GET(request) {
       userId = requestedUserId;
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        fullName: true,
-      },
-    });
+    const now = new Date();
+    const { year, quarter } = getQuarterFromDate(now);
+
+    const [user, leaveTypes] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          fullName: true,
+        },
+      }),
+
+      prisma.leaveType.findMany({
+        where: {
+          isActive: true,
+          code: { in: ["CASUAL", "SICK", "WFH"] },
+          effectiveFrom: { lte: now },
+        },
+        orderBy: { name: "asc" },
+      }),
+    ]);
 
     if (!user) {
       return errorResponse("Employee not found.", 404);
     }
 
-    const { year, quarter } = getQuarterFromDate(new Date());
+    const leaveTypeIds = leaveTypes.map((type) => type.id);
 
-    const leaveTypes = await prisma.leaveType.findMany({
-      where: {
-        isActive: true,
-        code: {
-          in: ["CASUAL", "SICK", "WFH"],
-        },
-        effectiveFrom: {
-          lte: new Date(),
-        },
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    const balances = await runWithRetry(() =>
-      prisma.$transaction(
-        async (tx) => {
-          const result = [];
-
-          const summary = {
-            casualLeave: 0,
-            sickLeave: 0,
-            workFromHome: 0,
-          };
-
-          for (const leaveType of leaveTypes) {
-            const entitlement =
-              await getOrCreateQuarterlyEntitlement(
-                tx,
-                userId,
-                leaveType,
-                year,
-                quarter
-              );
-
-            const calculated =
-              calculateAvailableBalance(entitlement);
-
-            result.push({
-              leaveTypeId: leaveType.id,
-              name: leaveType.name,
-              code: leaveType.code,
-              annualQuota: leaveType.annualQuota,
-              quarterlyQuota: leaveType.quarterlyQuota,
-              carryForwardAllowed: leaveType.carryForwardAllowed,
-              year,
-              quarter,
-              ...calculated,
-            });
-
-            if (leaveType.code === "CASUAL") {
-              summary.casualLeave = calculated.available;
-            }
-
-            if (leaveType.code === "SICK") {
-              summary.sickLeave = calculated.available;
-            }
-
-            if (leaveType.code === "WFH") {
-              summary.workFromHome = calculated.available;
-            }
-          }
-
-          await tx.leaveBalance.upsert({
-            where: { userId },
-            update: {
-              casualLeave: summary.casualLeave,
-              sickLeave: summary.sickLeave,
-              workFromHome: summary.workFromHome,
-            },
-            create: {
+    const records =
+      leaveTypeIds.length > 0
+        ? await prisma.quarterlyEntitlement.findMany({
+            where: {
               userId,
-              casualLeave: summary.casualLeave,
-              sickLeave: summary.sickLeave,
-              workFromHome: summary.workFromHome,
+              year,
+              quarter: { lte: quarter },
+              leaveTypeId: { in: leaveTypeIds },
             },
-          });
+            select: {
+              leaveTypeId: true,
+              quarter: true,
+              allocatedDays: true,
+              usedDays: true,
+              reservedDays: true,
+            },
+          })
+        : [];
 
-          return result;
-        },
-        {
-          isolationLevel: "Serializable",
-          maxWait: 10000,
-          timeout: 20000,
+    const recordMap = new Map();
+
+    for (const record of records) {
+      recordMap.set(
+        `${record.leaveTypeId}_${record.quarter}`,
+        record
+      );
+    }
+
+    const balances = leaveTypes.map((type) => {
+      let carryInDays = 0;
+      let current = null;
+
+      for (let q = 1; q <= quarter; q++) {
+        const record = recordMap.get(`${type.id}_${q}`);
+
+        const allocatedDays =
+          record?.allocatedDays ?? type.quarterlyQuota;
+
+        const usedDays = record?.usedDays ?? 0;
+        const reservedDays = record?.reservedDays ?? 0;
+
+        if (q === quarter) {
+          current = {
+            allocatedDays,
+            usedDays,
+            reservedDays,
+          };
         }
-      )
-    );
+
+        if (type.carryForwardAllowed && q < quarter) {
+          carryInDays = Math.max(
+            0,
+            allocatedDays +
+              carryInDays -
+              usedDays -
+              reservedDays
+          );
+        } else if (!type.carryForwardAllowed) {
+          carryInDays = 0;
+        }
+      }
+
+      const allocated = current?.allocatedDays ?? type.quarterlyQuota;
+      const used = current?.usedDays ?? 0;
+      const reserved = current?.reservedDays ?? 0;
+      const effectiveCarryIn = type.carryForwardAllowed
+        ? carryInDays
+        : 0;
+
+      const available = Math.max(
+        0,
+        allocated + effectiveCarryIn - used - reserved
+      );
+
+      return {
+        leaveTypeId: type.id,
+        name: type.name,
+        code: type.code,
+        annualQuota: type.annualQuota,
+        quarterlyQuota: type.quarterlyQuota,
+        carryForwardAllowed: type.carryForwardAllowed,
+        year,
+        quarter,
+        allocated,
+        carryIn: effectiveCarryIn,
+        used,
+        reserved,
+        available,
+      };
+    });
 
     return successResponse(
       {
@@ -167,16 +164,10 @@ export async function GET(request) {
   } catch (error) {
     console.error("Get Leave Balance Error:", error);
 
-    if (error.code === "P2034") {
-      return errorResponse(
-        "Unable to update leave balances because of simultaneous requests. Please try again.",
-        409
-      );
-    }
-
     return errorResponse(
       "Unable to retrieve leave balances.",
       500
     );
   }
 }
+
