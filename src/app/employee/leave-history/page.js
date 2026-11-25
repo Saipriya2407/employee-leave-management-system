@@ -1,8 +1,8 @@
-
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 
 export default function LeaveHistoryPage() {
   const [leaves, setLeaves] = useState([]);
@@ -10,8 +10,8 @@ export default function LeaveHistoryPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [cancellingId, setCancellingId] = useState(null);
+  const [selectedLeave, setSelectedLeave] = useState(null);
 
-  // Fetch leave applications
   const fetchLeaves = useCallback(async () => {
     try {
       setLoading(true);
@@ -25,26 +25,23 @@ export default function LeaveHistoryPage() {
 
       const data = await response.json();
 
-      console.log("Leave History API Response:", data);
-
       if (!response.ok) {
         throw new Error(
           data.message || "Unable to fetch leave history."
         );
       }
 
-      // Handle different API response structures
       const result = data.data ?? data;
 
       const leaveData = Array.isArray(result)
         ? result
         : Array.isArray(result.leaves)
-        ? result.leaves
-        : Array.isArray(result.requests)
-        ? result.requests
-        : Array.isArray(result.applications)
-        ? result.applications
-        : [];
+          ? result.leaves
+          : Array.isArray(result.requests)
+            ? result.requests
+            : Array.isArray(result.applications)
+              ? result.applications
+              : [];
 
       setLeaves(leaveData);
     } catch (err) {
@@ -59,13 +56,21 @@ export default function LeaveHistoryPage() {
     fetchLeaves();
   }, [fetchLeaves]);
 
-  // Cancel pending leave application
-  async function cancelLeave(id) {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this leave application?"
-    );
+  function openCancelModal(leave) {
+    setSelectedLeave(leave);
+    setMessage("");
+    setError("");
+  }
 
-    if (!confirmed) return;
+  function closeCancelModal() {
+    if (cancellingId !== null) return;
+    setSelectedLeave(null);
+  }
+
+  async function cancelLeave() {
+    if (!selectedLeave) return;
+
+    const id = selectedLeave.id;
 
     try {
       setMessage("");
@@ -73,7 +78,7 @@ export default function LeaveHistoryPage() {
       setCancellingId(id);
 
       const response = await fetch(
-        `/api/backend/leaves/${id}/cancel`,
+        `/api/backend/leaves/${encodeURIComponent(id)}/cancel`,
         {
           method: "PATCH",
           credentials: "include",
@@ -88,6 +93,7 @@ export default function LeaveHistoryPage() {
         );
       }
 
+      setSelectedLeave(null);
       setMessage("Leave application cancelled successfully.");
 
       await fetchLeaves();
@@ -98,7 +104,6 @@ export default function LeaveHistoryPage() {
     }
   }
 
-  // Format date
   function formatDate(date) {
     if (!date) return "-";
 
@@ -115,7 +120,6 @@ export default function LeaveHistoryPage() {
     });
   }
 
-  // Status styling
   function getStatusStyle(status) {
     const normalizedStatus = String(status || "").toUpperCase();
 
@@ -134,10 +138,9 @@ export default function LeaveHistoryPage() {
       return "bg-gray-100 text-gray-700";
     }
 
-    return "bg-yellow-100 text-yellow-700";
+    return "bg-amber-100 text-amber-700";
   }
 
-  // Get leave type name
   function getLeaveType(leave) {
     return (
       leave.leaveType?.name ||
@@ -150,7 +153,6 @@ export default function LeaveHistoryPage() {
     );
   }
 
-  // Get number of leave days
   function getLeaveDays(leave) {
     if (leave.totalDays != null) return leave.totalDays;
     if (leave.days != null) return leave.days;
@@ -190,86 +192,165 @@ export default function LeaveHistoryPage() {
       String(leave.status || "").toUpperCase() === "APPROVED"
   ).length;
 
+  const rejectedApplications = leaves.filter(
+    (leave) =>
+      String(leave.status || "").toUpperCase() === "REJECTED"
+  ).length;
+
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      {/* Professional Header */}
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-5 py-4 sm:flex-row sm:items-center lg:px-8">
           <Link
             href="/employee/dashboard"
-            className="text-2xl font-bold text-blue-800"
+            className="flex items-center gap-3"
           >
-            ELMS
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-800 text-lg font-bold text-white">
+              E
+            </div>
+
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900">
+                ELMS
+              </h1>
+              <p className="text-xs text-slate-500">
+                Employee Portal
+              </p>
+            </div>
           </Link>
 
-          <Link
-            href="/employee/dashboard"
-            className="rounded-lg bg-blue-50 px-4 py-2 font-medium text-blue-700 transition hover:bg-blue-100"
-          >
-            ← Dashboard
-          </Link>
+          <nav className="flex flex-wrap items-center gap-2 text-sm font-medium">
+            <Link
+              href="/employee/dashboard"
+              className="rounded-lg px-3 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-blue-800"
+            >
+              Dashboard
+            </Link>
+
+            <Link
+              href="/employee/leave-history"
+              className="rounded-lg bg-blue-50 px-3 py-2 font-semibold text-blue-800"
+            >
+              Leave History
+            </Link>
+
+            <Link
+              href="/employee/profile"
+              className="rounded-lg px-3 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-blue-800"
+            >
+              Profile
+            </Link>
+          </nav>
         </div>
       </header>
 
-      {/* Main content */}
-      <section className="mx-auto max-w-7xl px-5 py-10">
-        {/* Heading */}
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-            Employee Portal
-          </p>
-
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            My Leave History
-          </h1>
-
-          <p className="mt-3 max-w-2xl text-gray-600">
-            View your leave applications, check approval status,
-            and cancel pending requests.
-          </p>
+      <div className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-10">
+        {/* Back Button */}
+        <div className="mb-5">
+          <BackButton fallback="/employee/dashboard" />
         </div>
 
-        {/* Summary cards */}
-        <div className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">
-              Total Applications
+        {/* Page Heading */}
+        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
+              Employee Services
             </p>
 
-            <p className="mt-2 text-3xl font-bold text-gray-900">
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+              My Leave History
+            </h2>
+
+            <p className="mt-2 text-slate-500">
+              View your leave applications and track their approval status.
+            </p>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <section className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-500">
+                Total Applications
+              </p>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-lg">
+                📋
+              </span>
+            </div>
+
+            <p className="mt-4 text-3xl font-bold text-slate-900">
               {loading ? "..." : totalApplications}
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              All submitted requests
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm">
-            <p className="text-sm font-medium text-yellow-700">
-              Pending Applications
-            </p>
+          <div className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-500">
+                Pending
+              </p>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-lg">
+                ⏳
+              </span>
+            </div>
 
-            <p className="mt-2 text-3xl font-bold text-yellow-800">
+            <p className="mt-4 text-3xl font-bold text-amber-600">
               {loading ? "..." : pendingApplications}
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Awaiting approval
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
-            <p className="text-sm font-medium text-green-700">
-              Approved Applications
-            </p>
+          <div className="rounded-2xl border border-green-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-500">
+                Approved
+              </p>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-lg">
+                ✓
+              </span>
+            </div>
 
-            <p className="mt-2 text-3xl font-bold text-green-800">
+            <p className="mt-4 text-3xl font-bold text-green-600">
               {loading ? "..." : approvedApplications}
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Approved requests
+            </p>
           </div>
-        </div>
 
-        {/* Success message */}
+          <div className="rounded-2xl border border-red-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-500">
+                Rejected
+              </p>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-lg">
+                ✕
+              </span>
+            </div>
+
+            <p className="mt-4 text-3xl font-bold text-red-600">
+              {loading ? "..." : rejectedApplications}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Rejected requests
+            </p>
+          </div>
+        </section>
+
+        {/* Success Message */}
         {message && (
-          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">
-            {message}
+          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-800">
+            ✓ {message}
           </div>
         )}
 
-        {/* Error message */}
+        {/* Error Message */}
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
@@ -283,64 +364,51 @@ export default function LeaveHistoryPage() {
           </div>
         )}
 
-        {/* Leave history */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+        {/* Leave History */}
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col justify-between gap-3 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">
+              <h3 className="text-lg font-bold text-slate-900">
                 Leave Applications
-              </h2>
+              </h3>
 
-              <p className="mt-1 text-sm text-gray-500">
-                Your submitted leave requests and their current status.
+              <p className="mt-1 text-sm text-slate-500">
+                Your submitted requests and their current status.
               </p>
             </div>
 
-            <Link
-              href="/employee/apply-leave"
-              className="inline-flex items-center justify-center rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800"
-            >
-              + Apply for Leave
-            </Link>
+            <span className="w-fit rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">
+              {loading ? "Loading..." : `${totalApplications} Requests`}
+            </span>
           </div>
 
-          {/* Loading */}
           {loading ? (
             <div className="p-12 text-center">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-700" />
+              <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-700" />
 
-              <p className="mt-4 text-sm text-gray-500">
+              <p className="mt-4 text-sm text-slate-500">
                 Loading your leave history...
               </p>
             </div>
           ) : leaves.length === 0 ? (
-            /* Empty state */
             <div className="px-5 py-16 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl">
                 📄
               </div>
 
-              <h3 className="mt-5 text-lg font-bold text-gray-900">
+              <h3 className="mt-5 text-lg font-bold text-slate-900">
                 No leave applications yet
               </h3>
 
-              <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">
-                Your leave applications will appear here after you
-                submit your first request.
+              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+                Your leave applications will appear here after you submit
+                your first request.
               </p>
-
-              <Link
-                href="/employee/apply-leave"
-                className="mt-6 inline-flex rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800"
-              >
-                Apply for Leave
-              </Link>
             </div>
           ) : (
-            /* Applications table */
             <div className="overflow-x-auto">
               <table className="w-full min-w-[850px] text-left">
-                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-6 py-4 font-semibold">
                       Leave Type
@@ -368,7 +436,7 @@ export default function LeaveHistoryPage() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100">
                   {leaves.map((leave) => {
                     const status = String(
                       leave.status || "PENDING"
@@ -379,29 +447,29 @@ export default function LeaveHistoryPage() {
                     return (
                       <tr
                         key={leave.id}
-                        className="transition hover:bg-gray-50"
+                        className="transition hover:bg-slate-50"
                       >
                         <td className="px-6 py-5">
-                          <p className="font-semibold text-gray-900">
+                          <p className="font-semibold text-slate-900">
                             {getLeaveType(leave)}
                           </p>
 
                           {leave.reason && (
-                            <p className="mt-1 max-w-xs truncate text-xs text-gray-500">
+                            <p className="mt-1 max-w-xs truncate text-xs text-slate-500">
                               {leave.reason}
                             </p>
                           )}
                         </td>
 
-                        <td className="whitespace-nowrap px-6 py-5 text-sm text-gray-600">
+                        <td className="whitespace-nowrap px-6 py-5 text-sm text-slate-600">
                           {formatDate(leave.startDate || leave.fromDate)}
                         </td>
 
-                        <td className="whitespace-nowrap px-6 py-5 text-sm text-gray-600">
+                        <td className="whitespace-nowrap px-6 py-5 text-sm text-slate-600">
                           {formatDate(leave.endDate || leave.toDate)}
                         </td>
 
-                        <td className="px-6 py-5 text-sm font-medium text-gray-700">
+                        <td className="px-6 py-5 text-sm font-semibold text-slate-700">
                           {getLeaveDays(leave)}
                         </td>
 
@@ -416,16 +484,14 @@ export default function LeaveHistoryPage() {
                         <td className="px-6 py-5">
                           {canCancel ? (
                             <button
-                              onClick={() => cancelLeave(leave.id)}
+                              onClick={() => openCancelModal(leave)}
                               disabled={cancellingId === leave.id}
-                              className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
                             >
-                              {cancellingId === leave.id
-                                ? "Cancelling..."
-                                : "Cancel"}
+                              Cancel
                             </button>
                           ) : (
-                            <span className="text-sm text-gray-400">
+                            <span className="text-sm text-slate-400">
                               —
                             </span>
                           )}
@@ -437,21 +503,89 @@ export default function LeaveHistoryPage() {
               </table>
             </div>
           )}
-        </div>
+        </section>
 
         {/* Information */}
-        <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
-          <p className="text-sm font-semibold text-blue-900">
-            Leave application information
-          </p>
+        <section className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-5">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">ℹ️</span>
 
-          <p className="mt-1 text-sm text-blue-800">
-            Pending applications can be cancelled. Approved,
-            rejected, or cancelled applications remain in your
-            history for reference.
-          </p>
+            <div>
+              <h3 className="text-sm font-bold text-blue-900">
+                Leave Application Information
+              </h3>
+
+              <p className="mt-1 text-sm leading-6 text-blue-800">
+                Pending applications can be cancelled. Approved, rejected,
+                or cancelled applications remain in your history for
+                future reference.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <footer className="py-7 text-center text-sm text-slate-500">
+          © 2026 Employee Leave Management System
+        </footer>
+      </div>
+
+      {/* Custom Cancellation Modal */}
+      {selectedLeave && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              closeCancelModal();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-title"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-xl text-red-600">
+              !
+            </div>
+
+            <h2
+              id="cancel-title"
+              className="text-xl font-bold text-slate-900"
+            >
+              Cancel Leave Application?
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Are you sure you want to cancel your{" "}
+              <strong>{getLeaveType(selectedLeave)}</strong> application?
+              This action will update its status.
+            </p>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeCancelModal}
+                disabled={cancellingId !== null}
+                className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Keep Application
+              </button>
+
+              <button
+                type="button"
+                onClick={cancelLeave}
+                disabled={cancellingId !== null}
+                className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {cancellingId !== null
+                  ? "Cancelling..."
+                  : "Confirm Cancel"}
+              </button>
+            </div>
+          </div>
         </div>
-      </section>
+      )}
     </main>
   );
 }

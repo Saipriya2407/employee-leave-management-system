@@ -1,8 +1,8 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 
 export default function ApplyLeavePage() {
   const [leaveTypes, setLeaveTypes] = useState([]);
@@ -24,7 +24,6 @@ export default function ApplyLeavePage() {
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Load current date, quarter, leave types and balances
   useEffect(() => {
     const today = new Date();
 
@@ -42,7 +41,6 @@ export default function ApplyLeavePage() {
         setLoading(true);
         setMessage("");
 
-        // Fetch leave types
         const response = await fetch("/api/backend/leave-types", {
           method: "GET",
           credentials: "include",
@@ -51,28 +49,23 @@ export default function ApplyLeavePage() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.message || "Unable to load leave types."
-          );
+          throw new Error(data.message || "Unable to load leave types.");
         }
 
         const types = Array.isArray(data.data?.leaveTypes)
           ? data.data.leaveTypes
           : Array.isArray(data.leaveTypes)
-          ? data.leaveTypes
-          : Array.isArray(data.data)
-          ? data.data
-          : [];
+            ? data.leaveTypes
+            : Array.isArray(data.data)
+              ? data.data
+              : [];
 
         setLeaveTypes(
           types.filter(
-            (type) =>
-              type.isActive !== false &&
-              type.active !== false
+            (type) => type.isActive !== false && type.active !== false
           )
         );
 
-        // Fetch employee balances
         const balanceResponse = await fetch(
           "/api/backend/leaves/balance",
           {
@@ -85,8 +78,7 @@ export default function ApplyLeavePage() {
 
         if (!balanceResponse.ok) {
           throw new Error(
-            balanceData.message ||
-              "Unable to load leave balance."
+            balanceData.message || "Unable to load leave balance."
           );
         }
 
@@ -95,8 +87,8 @@ export default function ApplyLeavePage() {
         )
           ? balanceData.data.balances
           : Array.isArray(balanceData.balances)
-          ? balanceData.balances
-          : [];
+            ? balanceData.balances
+            : [];
 
         setBalances(employeeBalances);
       } catch (error) {
@@ -110,21 +102,16 @@ export default function ApplyLeavePage() {
     fetchLeaveData();
   }, []);
 
-  // Selected leave type
   const selectedLeaveType = useMemo(() => {
     return (
       leaveTypes.find(
-        (type) =>
-          String(type.id) === String(form.leaveType)
+        (type) => String(type.id) === String(form.leaveType)
       ) || null
     );
   }, [leaveTypes, form.leaveType]);
 
-  // Find balance using leave type CODE
   const selectedBalance = useMemo(() => {
-    if (!selectedLeaveType) {
-      return null;
-    }
+    if (!selectedLeaveType) return null;
 
     return (
       balances.find(
@@ -135,28 +122,21 @@ export default function ApplyLeavePage() {
     );
   }, [balances, selectedLeaveType]);
 
-  // Calculate leave days
   const totalDays = useMemo(() => {
-    if (!form.startDate || !form.endDate) {
-      return 0;
-    }
+    if (!form.startDate || !form.endDate) return 0;
 
     const start = new Date(`${form.startDate}T00:00:00`);
     const end = new Date(`${form.endDate}T00:00:00`);
 
-    if (end < start) {
-      return 0;
-    }
+    if (end < start) return 0;
 
     return (
       Math.round(
-        (end.getTime() - start.getTime()) /
-          (1000 * 60 * 60 * 24)
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
       ) + 1
     );
   }, [form.startDate, form.endDate]);
 
-  // Available balance
   const availableBalance = selectedBalance
     ? Number(
         selectedBalance.available ??
@@ -166,7 +146,6 @@ export default function ApplyLeavePage() {
       )
     : 0;
 
-  // Form changes
   function handleChange(event) {
     const { name, value } = event.target;
 
@@ -179,15 +158,11 @@ export default function ApplyLeavePage() {
     setSuccess(false);
   }
 
-  // Refresh employee balance
   async function refreshBalances() {
-    const response = await fetch(
-      "/api/backend/leaves/balance",
-      {
-        method: "GET",
-        credentials: "include",
-      }
-    );
+    const response = await fetch("/api/backend/leaves/balance", {
+      method: "GET",
+      credentials: "include",
+    });
 
     const data = await response.json();
 
@@ -200,13 +175,12 @@ export default function ApplyLeavePage() {
     const employeeBalances = Array.isArray(data.data?.balances)
       ? data.data.balances
       : Array.isArray(data.balances)
-      ? data.balances
-      : [];
+        ? data.balances
+        : [];
 
     setBalances(employeeBalances);
   }
 
-  // Submit application
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -234,9 +208,7 @@ export default function ApplyLeavePage() {
     }
 
     if (form.reason.trim().length < 5) {
-      setMessage(
-        "Please enter a reason of at least 5 characters."
-      );
+      setMessage("Please enter a reason of at least 5 characters.");
       return;
     }
 
@@ -246,9 +218,7 @@ export default function ApplyLeavePage() {
     }
 
     if (!selectedBalance) {
-      setMessage(
-        "Leave balance is unavailable. Please refresh the page."
-      );
+      setMessage("Leave balance is unavailable. Please refresh the page.");
       return;
     }
 
@@ -259,7 +229,6 @@ export default function ApplyLeavePage() {
       return;
     }
 
-    // Validate current quarter for Casual Leave and WFH
     const leaveCode = String(
       selectedLeaveType.code || ""
     ).trim().toUpperCase();
@@ -275,16 +244,12 @@ export default function ApplyLeavePage() {
     if (isQuarterlyLeave) {
       const startQuarter =
         Math.floor(
-          new Date(
-            `${form.startDate}T00:00:00`
-          ).getMonth() / 3
+          new Date(`${form.startDate}T00:00:00`).getMonth() / 3
         ) + 1;
 
       const endQuarter =
         Math.floor(
-          new Date(
-            `${form.endDate}T00:00:00`
-          ).getMonth() / 3
+          new Date(`${form.endDate}T00:00:00`).getMonth() / 3
         ) + 1;
 
       if (
@@ -318,15 +283,11 @@ export default function ApplyLeavePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Leave application failed."
-        );
+        throw new Error(data.message || "Leave application failed.");
       }
 
       setSuccess(true);
-      setMessage(
-        "Leave application submitted successfully!"
-      );
+      setMessage("Leave application submitted successfully!");
 
       setForm({
         leaveType: "",
@@ -338,57 +299,47 @@ export default function ApplyLeavePage() {
       await refreshBalances();
     } catch (error) {
       console.error("Apply leave error:", error);
-      setMessage(
-        error.message || "Unable to connect to server."
-      );
+      setMessage(error.message || "Unable to connect to server.");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 text-gray-900">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-5 py-5 sm:flex-row sm:items-center">
-          <div>
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-5 py-4 sm:flex-row sm:items-center lg:px-8">
+          <Link href="/employee/dashboard" className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-800 text-lg font-bold text-white">
+              E
+            </div>
+
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900">
+                ELMS
+              </h1>
+              <p className="text-xs text-slate-500">Employee Portal</p>
+            </div>
+          </Link>
+
+          <nav className="flex flex-wrap items-center gap-2 text-sm font-medium">
             <Link
               href="/employee/dashboard"
-              className="text-2xl font-bold text-blue-800"
-            >
-              ELMS
-            </Link>
-
-            <p className="text-sm text-gray-600">
-              Employee Leave Management System
-            </p>
-          </div>
-
-          <nav className="flex flex-wrap gap-4 text-sm font-semibold">
-            <Link
-              href="/employee/dashboard"
-              className="hover:text-blue-700"
+              className="rounded-lg px-3 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-blue-800"
             >
               Dashboard
             </Link>
 
             <Link
               href="/employee/apply-leave"
-              className="text-blue-700"
+              className="rounded-lg bg-blue-50 px-3 py-2 font-semibold text-blue-800"
             >
               Apply Leave
             </Link>
 
             <Link
-              href="/employee/leave-history"
-              className="hover:text-blue-700"
-            >
-              Leave History
-            </Link>
-
-            <Link
               href="/employee/profile"
-              className="hover:text-blue-700"
+              className="rounded-lg px-3 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-blue-800"
             >
               Profile
             </Link>
@@ -396,249 +347,285 @@ export default function ApplyLeavePage() {
         </div>
       </header>
 
-      {/* Main */}
-      <section className="mx-auto max-w-3xl px-5 py-10 sm:py-14">
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
-            Employee Portal
-          </p>
-
-          <h1 className="mt-2 text-3xl font-bold">
-            Apply for Leave
-          </h1>
-
-          <p className="mt-2 text-gray-600">
-            Submit your leave request for admin approval.
-          </p>
+      <div className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-10">
+        <div className="mb-5">
+          <BackButton fallback="/employee/dashboard" />
         </div>
 
-        {/* Quarterly policy */}
-        <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-5">
-          <h2 className="font-bold text-blue-900">
-            Leave Policy
-          </h2>
+        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
+              Employee Services
+            </p>
 
-          <p className="mt-2 text-sm text-blue-800">
-            Casual Leave and WFH are allocated quarterly.
-            Unused Sick Leave can carry forward within the
-            current calendar year.
-          </p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+              Apply for Leave
+            </h2>
 
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-lg bg-white p-3">
-              <p className="text-xs text-gray-500">
-                Current Quarter
-              </p>
-
-              <p className="mt-1 font-bold text-blue-700">
-                {currentQuarter ? `Q${currentQuarter}` : "--"}
-              </p>
-            </div>
-
-            <div className="rounded-lg bg-white p-3">
-              <p className="text-xs text-gray-500">
-                Casual Leave
-              </p>
-
-              <p className="mt-1 font-bold">3 / Quarter</p>
-            </div>
-
-            <div className="rounded-lg bg-white p-3">
-              <p className="text-xs text-gray-500">
-                Sick Leave
-              </p>
-
-              <p className="mt-1 font-bold">3 / Quarter</p>
-            </div>
-
-            <div className="rounded-lg bg-white p-3">
-              <p className="text-xs text-gray-500">
-                WFH
-              </p>
-
-              <p className="mt-1 font-bold">3 / Quarter</p>
-            </div>
+            <p className="mt-2 text-slate-500">
+              Submit your leave request and track its approval status.
+            </p>
           </div>
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="mb-6 rounded-lg bg-white p-4 text-gray-600">
-            Loading leave types and balances...
-          </div>
-        )}
+        <section className="mb-8 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
+          <div className="border-b border-blue-100 bg-blue-50/70 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-xl">
+                📋
+              </div>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8"
-        >
-          {/* Leave Type */}
-          <div>
-            <label
-              htmlFor="leaveType"
-              className="mb-2 block font-semibold"
-            >
-              Leave Type
-            </label>
-
-            <select
-              id="leaveType"
-              name="leaveType"
-              value={form.leaveType}
-              onChange={handleChange}
-              required
-              disabled={loading}
-              className="w-full rounded-lg border border-gray-300 bg-white p-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
-            >
-              <option value="">Select Leave Type</option>
-
-              {leaveTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {String(type.name || "").trim()}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Balance */}
-          {selectedLeaveType && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm font-medium text-gray-600">
-                Available Balance
-              </p>
-
-              <p className="mt-1 text-2xl font-bold text-blue-700">
-                {selectedBalance
-                  ? `${availableBalance} days`
-                  : "Balance unavailable"}
-              </p>
-
-              <p className="mt-1 text-xs text-gray-500">
-                Current quarter: Q{currentQuarter}
-              </p>
+              <div>
+                <h3 className="font-bold text-slate-900">Leave Policy</h3>
+                <p className="text-sm text-slate-600">
+                  Understand your quarterly leave allocation.
+                </p>
+              </div>
             </div>
-          )}
-
-          {/* Start Date */}
-          <div>
-            <label
-              htmlFor="startDate"
-              className="mb-2 block font-semibold"
-            >
-              Start Date
-            </label>
-
-            <input
-              id="startDate"
-              type="date"
-              name="startDate"
-              value={form.startDate}
-              min={todayString}
-              onChange={handleChange}
-              required
-              className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
           </div>
 
-          {/* End Date */}
-          <div>
-            <label
-              htmlFor="endDate"
-              className="mb-2 block font-semibold"
-            >
-              End Date
-            </label>
-
-            <input
-              id="endDate"
-              type="date"
-              name="endDate"
-              value={form.endDate}
-              min={form.startDate || todayString}
-              onChange={handleChange}
-              required
-              className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          {/* Days */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p className="text-sm font-medium text-gray-600">
-              Total Leave Days
+          <div className="p-6">
+            <p className="mb-5 text-sm leading-6 text-slate-600">
+              Casual Leave and Work From Home are allocated quarterly.
+              Unused Sick Leave can carry forward within the current
+              calendar year.
             </p>
 
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {totalDays} {totalDays === 1 ? "day" : "days"}
-            </p>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Current Quarter
+                </p>
+                <p className="mt-2 text-2xl font-bold text-blue-800">
+                  {currentQuarter ? `Q${currentQuarter}` : "--"}
+                </p>
+              </div>
 
-            <p className="mt-1 text-xs text-gray-500">
-              Calculated using inclusive calendar days.
-            </p>
-          </div>
+              <div className="rounded-xl border border-slate-200 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Casual Leave
+                </p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">3</p>
+                <p className="text-xs text-slate-500">Days / Quarter</p>
+              </div>
 
-          {/* Reason */}
-          <div>
-            <label
-              htmlFor="reason"
-              className="mb-2 block font-semibold"
-            >
-              Reason
-            </label>
+              <div className="rounded-xl border border-slate-200 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Sick Leave
+                </p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">3</p>
+                <p className="text-xs text-slate-500">Days / Quarter</p>
+              </div>
 
-            <textarea
-              id="reason"
-              name="reason"
-              value={form.reason}
-              onChange={handleChange}
-              required
-              minLength={5}
-              rows={4}
-              placeholder="Enter your reason for leave..."
-              className="w-full resize-y rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          {/* Message */}
-          {message && (
-            <div
-              role="alert"
-              className={`rounded-lg p-4 text-sm ${
-                success
-                  ? "bg-green-50 text-green-700"
-                  : "bg-red-50 text-red-700"
-              }`}
-            >
-              {message}
+              <div className="rounded-xl border border-slate-200 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Work From Home
+                </p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">3</p>
+                <p className="text-xs text-slate-500">Days / Quarter</p>
+              </div>
             </div>
-          )}
-
-          {/* Buttons */}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Link
-              href="/employee/dashboard"
-              className="rounded-lg border border-gray-300 px-6 py-3 text-center font-semibold hover:bg-gray-50"
-            >
-              Cancel
-            </Link>
-
-            <button
-              type="submit"
-              disabled={loading || submitting || !todayString}
-              className="rounded-lg bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting
-                ? "Submitting..."
-                : "Submit Leave Application"}
-            </button>
           </div>
-        </form>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white px-5 py-5 text-center text-sm text-gray-500">
-        © 2026 Employee Leave Management System
-      </footer>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-6 py-5 md:px-8">
+            <h3 className="text-xl font-bold text-slate-900">
+              Leave Application Form
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Complete the details below to submit your request.
+            </p>
+          </div>
+
+          <div className="p-6 md:p-8">
+            {loading && (
+              <div className="mb-6 flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-700 border-t-transparent" />
+                Loading leave types and balances...
+              </div>
+            )}
+
+            {message && (
+              <div
+                role="alert"
+                className={`mb-6 flex items-start gap-3 rounded-lg border p-4 text-sm ${
+                  success
+                    ? "border-green-200 bg-green-50 text-green-800"
+                    : "border-red-200 bg-red-50 text-red-800"
+                }`}
+              >
+                <span className="text-lg">{success ? "✓" : "!"}</span>
+                <p>{message}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-7">
+              <div>
+                <label
+                  htmlFor="leaveType"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
+                  Leave Type <span className="text-red-500">*</span>
+                </label>
+
+                <select
+                  id="leaveType"
+                  name="leaveType"
+                  value={form.leaveType}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-800 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+                >
+                  <option value="">Select Leave Type</option>
+
+                  {leaveTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {String(type.name || "").trim()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedLeaveType && (
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">
+                        Available Leave Balance
+                      </p>
+                      <p className="mt-1 text-xs text-blue-700">
+                        {selectedLeaveType.name} · Current Quarter Q
+                        {currentQuarter}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white px-5 py-3 text-center shadow-sm">
+                      <p className="text-2xl font-bold text-blue-800">
+                        {selectedBalance ? `${availableBalance}` : "--"}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500">
+                        Days Available
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="startDate"
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                  >
+                    Start Date <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    id="startDate"
+                    type="date"
+                    name="startDate"
+                    value={form.startDate}
+                    min={todayString}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-800 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="endDate"
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                  >
+                    End Date <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    id="endDate"
+                    type="date"
+                    name="endDate"
+                    value={form.endDate}
+                    min={form.startDate || todayString}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-800 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center">
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">
+                    Total Leave Days
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Calculated automatically from the selected dates.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-white px-5 py-3 text-center shadow-sm">
+                  <p className="text-2xl font-bold text-blue-800">
+                    {totalDays}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {totalDays === 1 ? "Day" : "Days"}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="reason"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
+                  Reason for Leave <span className="text-red-500">*</span>
+                </label>
+
+                <textarea
+                  id="reason"
+                  name="reason"
+                  value={form.reason}
+                  onChange={handleChange}
+                  required
+                  minLength={5}
+                  rows={4}
+                  placeholder="Explain why you are requesting leave..."
+                  className="w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                />
+
+                <p className="mt-2 text-xs text-slate-500">
+                  Please provide at least 5 characters.
+                </p>
+              </div>
+
+              <div className="flex flex-col-reverse justify-end gap-3 border-t border-slate-100 pt-6 sm:flex-row">
+                <Link
+                  href="/employee/dashboard"
+                  className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Cancel
+                </Link>
+
+                <button
+                  type="submit"
+                  disabled={loading || submitting || !todayString}
+                  className="rounded-xl bg-blue-800 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting
+                    ? "Submitting..."
+                    : "Submit Leave Application"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <footer className="py-7 text-center text-sm text-slate-500">
+          © 2026 Employee Leave Management System
+        </footer>
+      </div>
     </main>
   );
 }
