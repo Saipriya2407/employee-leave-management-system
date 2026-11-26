@@ -1,287 +1,7 @@
-
-// "use client";
-
-// import { useEffect, useMemo, useState } from "react";
-// import Link from "next/link";
-
-// export default function EmployeesPage() {
-//   const [employees, setEmployees] = useState([]);
-//   const [totalEmployees, setTotalEmployees] = useState(0);
-//   const [search, setSearch] = useState("");
-//   const [departmentFilter, setDepartmentFilter] = useState("All");
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState("");
-
-//   // Fetch employees from backend
-//   useEffect(() => {
-//     const fetchEmployees = async () => {
-//       try {
-//         setLoading(true);
-//         setError("");
-
-//         const response = await fetch(
-//           "/api/backend/admin/employees",
-//           {
-//             method: "GET",
-//             credentials: "include",
-//             cache: "no-store",
-//           }
-//         );
-
-//         const data = await response.json();
-
-//         if (!response.ok) {
-//           throw new Error(
-//             data.message || "Failed to fetch employees"
-//           );
-//         }
-
-//         // Backend response: data.data.employees
-//         const result = data.data;
-
-//         const employeeList = Array.isArray(result?.employees)
-//           ? result.employees
-//           : Array.isArray(result)
-//             ? result
-//             : Array.isArray(data)
-//               ? data
-//               : [];
-
-//         setEmployees(employeeList);
-
-//         // Get total employee count from pagination
-//         setTotalEmployees(
-//           result?.pagination?.total ?? employeeList.length
-//         );
-//       } catch (err) {
-//         console.error("Fetch employees error:", err);
-//         setError(err.message || "Unable to load employees.");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchEmployees();
-//   }, []);
-
-//   // Department list
-//   const departments = useMemo(() => {
-//     return [
-//       "All",
-//       ...new Set(
-//         employees
-//           .map((employee) => employee.department)
-//           .filter(Boolean)
-//       ),
-//     ];
-//   }, [employees]);
-
-//   // Search and department filtering
-//   const filteredEmployees = useMemo(() => {
-//     return employees.filter((employee) => {
-//       const name =
-//         employee.fullName ||
-//         employee.name ||
-//         "";
-
-//       const email = employee.email || "";
-
-//       const employeeCode =
-//         employee.employeeCode ||
-//         employee.employeeId ||
-//         employee.id ||
-//         "";
-
-//       const department = employee.department || "";
-
-//       const searchText = search.toLowerCase();
-
-//       const matchesSearch = [
-//         name,
-//         email,
-//         employeeCode,
-//       ].some((value) =>
-//         String(value).toLowerCase().includes(searchText)
-//       );
-
-//       const matchesDepartment =
-//         departmentFilter === "All" ||
-//         department === departmentFilter;
-
-//       return matchesSearch && matchesDepartment;
-//     });
-//   }, [employees, search, departmentFilter]);
-
-//   return (
-//     <div className="min-h-full bg-gray-100 p-4 sm:p-6 lg:p-8">
-//       <div className="mx-auto max-w-7xl">
-
-//         {/* Page Header */}
-//         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-//           <div>
-//             <h1 className="text-3xl font-bold text-gray-800">
-//               Employees
-//             </h1>
-
-//             <p className="mt-1 text-gray-500">
-//               View and manage all registered employees.
-//             </p>
-//           </div>
-
-//           <Link
-//             href="/admin/dashboard"
-//             className="rounded-lg bg-blue-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800"
-//           >
-//             ← Back to Dashboard
-//           </Link>
-//         </div>
-
-//         {/* Total Employees */}
-//         <div className="mb-6 rounded-xl bg-white p-5 shadow-sm">
-//           <p className="text-sm font-medium text-gray-500">
-//             Total Employees
-//           </p>
-
-//           <p className="mt-2 text-3xl font-bold text-blue-900">
-//             {loading ? "..." : totalEmployees}
-//           </p>
-//         </div>
-
-//         {/* Search and Department Filter */}
-//         <div className="mb-6 flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row">
-
-//           <input
-//             type="text"
-//             placeholder="Search by name, email or employee ID..."
-//             value={search}
-//             onChange={(e) => setSearch(e.target.value)}
-//             className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-//           />
-
-//           <select
-//             value={departmentFilter}
-//             onChange={(e) =>
-//               setDepartmentFilter(e.target.value)
-//             }
-//             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 sm:min-w-52"
-//           >
-//             {departments.map((department) => (
-//               <option key={department} value={department}>
-//                 {department === "All"
-//                   ? "All Departments"
-//                   : department}
-//               </option>
-//             ))}
-//           </select>
-//         </div>
-
-//         {/* Employee Table */}
-//         <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-
-//           <div className="border-b px-5 py-4">
-//             <h2 className="text-lg font-semibold text-gray-800">
-//               Employee List
-//             </h2>
-
-//             <p className="mt-1 text-sm text-gray-500">
-//               Showing {filteredEmployees.length} employees
-//             </p>
-//           </div>
-
-//           {loading ? (
-//             <div className="p-10 text-center text-gray-500">
-//               Loading employees...
-//             </div>
-//           ) : error ? (
-//             <div className="p-10 text-center text-red-600">
-//               {error}
-//             </div>
-//           ) : filteredEmployees.length === 0 ? (
-//             <div className="p-10 text-center text-gray-500">
-//               No employees found.
-//             </div>
-//           ) : (
-//             <div className="overflow-x-auto">
-//               <table className="w-full min-w-[650px] text-left">
-
-//                 <thead className="bg-gray-50 text-sm text-gray-600">
-//                   <tr>
-//                     <th className="px-5 py-4 font-semibold">
-//                       Employee
-//                     </th>
-
-//                     <th className="px-5 py-4 font-semibold">
-//                       Employee ID
-//                     </th>
-
-//                     <th className="px-5 py-4 font-semibold">
-//                       Department
-//                     </th>
-
-//                     <th className="px-5 py-4 font-semibold">
-//                       Role
-//                     </th>
-//                   </tr>
-//                 </thead>
-
-//                 <tbody className="divide-y divide-gray-100">
-//                   {filteredEmployees.map((employee, index) => {
-//                     const name =
-//                       employee.fullName ||
-//                       employee.name ||
-//                       "N/A";
-
-//                     const employeeCode =
-//                       employee.employeeCode ||
-//                       employee.employeeId ||
-//                       employee.id ||
-//                       "N/A";
-
-//                     return (
-//                       <tr
-//                         key={employee.id || employeeCode || index}
-//                         className="transition hover:bg-gray-50"
-//                       >
-//                         <td className="px-5 py-4">
-//                           <div className="font-medium text-gray-800">
-//                             {name}
-//                           </div>
-
-//                           <div className="text-sm text-gray-500">
-//                             {employee.email || "N/A"}
-//                           </div>
-//                         </td>
-
-//                         <td className="px-5 py-4 text-gray-700">
-//                           {employeeCode}
-//                         </td>
-
-//                         <td className="px-5 py-4 text-gray-700">
-//                           {employee.department || "N/A"}
-//                         </td>
-
-//                         <td className="px-5 py-4 text-gray-700">
-//                           {employee.role || "EMPLOYEE"}
-//                         </td>
-//                       </tr>
-//                     );
-//                   })}
-//                 </tbody>
-
-//               </table>
-//             </div>
-//           )}
-//         </div>
-
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import BackButton from "@/components/BackButton";
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
@@ -295,7 +15,6 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Fetch employees for the selected page
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -351,7 +70,6 @@ export default function EmployeesPage() {
     fetchEmployees();
   }, [currentPage]);
 
-  // Department list
   const departments = useMemo(() => {
     return [
       "All",
@@ -363,7 +81,6 @@ export default function EmployeesPage() {
     ];
   }, [employees]);
 
-  // Search and department filtering
   const filteredEmployees = useMemo(() => {
     return employees.filter((employee) => {
       const name =
@@ -399,7 +116,6 @@ export default function EmployeesPage() {
     });
   }, [employees, search, departmentFilter]);
 
-  // Change page
   function goToPage(page) {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
@@ -410,23 +126,18 @@ export default function EmployeesPage() {
       <div className="mx-auto max-w-7xl">
 
         {/* Page Header */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div>
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <BackButton fallback="/admin/dashboard" />
+
             <h1 className="text-3xl font-bold text-gray-800">
               Employees
             </h1>
-
-            <p className="mt-1 text-gray-500">
-              View and manage all registered employees.
-            </p>
           </div>
 
-          <Link
-            href="/admin/dashboard"
-            className="rounded-lg bg-blue-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800"
-          >
-            ← Back to Dashboard
-          </Link>
+          <p className="mt-1 ml-11 text-gray-500">
+            View and manage all registered employees.
+          </p>
         </div>
 
         {/* Total Employees */}

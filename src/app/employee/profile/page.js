@@ -49,6 +49,19 @@ export default function EmployeeProfilePage() {
     fetchProfile();
   }, []);
 
+  async function handleLogout() {
+    try {
+      await fetch("/api/backend/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    } finally {
+      window.location.href = "/login";
+    }
+  }
+
   function getValue(...values) {
     return (
       values.find(
@@ -115,7 +128,7 @@ export default function EmployeeProfilePage() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
-      {/* Professional Navigation */}
+      {/* Navigation */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-5 py-4 sm:flex-row sm:items-center lg:px-8">
           <Link
@@ -164,29 +177,36 @@ export default function EmployeeProfilePage() {
             >
               Profile
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-slate-700 transition hover:bg-slate-50"
+            >
+              Logout
+            </button>
           </nav>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-10">
-        {/* Back Button - Left Side */}
-        <div className="mb-5">
+        {/* Page Heading with Back Button */}
+        <div className="mb-8 flex items-center gap-3">
           <BackButton fallback="/employee/dashboard" />
-        </div>
 
-        {/* Page Heading */}
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
-            Employee Services
-          </p>
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
+              Employee Services
+            </p>
 
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-            My Profile
-          </h2>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+              My Profile
+            </h2>
 
-          <p className="mt-2 text-slate-500">
-            View your registered employee account information.
-          </p>
+            <p className="mt-2 text-slate-500">
+              View your registered employee account information.
+            </p>
+          </div>
         </div>
 
         {/* Profile Card */}
@@ -298,7 +318,6 @@ export default function EmployeeProfilePage() {
                   </p>
 
                   <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {/* Apply Leave */}
                     <Link
                       href="/employee/apply-leave"
                       className="group flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50/70 p-5 transition hover:border-blue-400 hover:bg-blue-100"
@@ -324,7 +343,6 @@ export default function EmployeeProfilePage() {
                       </span>
                     </Link>
 
-                    {/* Leave History */}
                     <Link
                       href="/employee/leave-history"
                       className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white p-5 transition hover:border-blue-300 hover:bg-slate-50"

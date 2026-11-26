@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -11,6 +12,9 @@ export default function LeaveHistoryPage() {
   const [error, setError] = useState("");
   const [cancellingId, setCancellingId] = useState(null);
   const [selectedLeave, setSelectedLeave] = useState(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const fetchLeaves = useCallback(async () => {
     try {
@@ -26,9 +30,7 @@ export default function LeaveHistoryPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Unable to fetch leave history."
-        );
+        throw new Error(data.message || "Unable to fetch leave history.");
       }
 
       const result = data.data ?? data;
@@ -55,6 +57,22 @@ export default function LeaveHistoryPage() {
   useEffect(() => {
     fetchLeaves();
   }, [fetchLeaves]);
+
+  const totalPages = Math.ceil(leaves.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const currentLeaves = leaves.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  useEffect(() => {
+    if (totalPages === 0 && currentPage !== 1) {
+      setCurrentPage(1);
+    } else if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   function openCancelModal(leave) {
     setSelectedLeave(leave);
@@ -88,9 +106,7 @@ export default function LeaveHistoryPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Unable to cancel leave."
-        );
+        throw new Error(data.message || "Unable to cancel leave.");
       }
 
       setSelectedLeave(null);
@@ -109,9 +125,7 @@ export default function LeaveHistoryPage() {
 
     const parsedDate = new Date(date);
 
-    if (Number.isNaN(parsedDate.getTime())) {
-      return "-";
-    }
+    if (Number.isNaN(parsedDate.getTime())) return "-";
 
     return parsedDate.toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -170,9 +184,7 @@ export default function LeaveHistoryPage() {
       }
 
       const difference =
-        Math.round(
-          (end - start) / (1000 * 60 * 60 * 24)
-        ) + 1;
+        Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
       return difference > 0 ? difference : "-";
     }
@@ -183,23 +195,33 @@ export default function LeaveHistoryPage() {
   const totalApplications = leaves.length;
 
   const pendingApplications = leaves.filter(
-    (leave) =>
-      String(leave.status || "").toUpperCase() === "PENDING"
+    (leave) => String(leave.status || "").toUpperCase() === "PENDING"
   ).length;
 
   const approvedApplications = leaves.filter(
-    (leave) =>
-      String(leave.status || "").toUpperCase() === "APPROVED"
+    (leave) => String(leave.status || "").toUpperCase() === "APPROVED"
   ).length;
 
   const rejectedApplications = leaves.filter(
-    (leave) =>
-      String(leave.status || "").toUpperCase() === "REJECTED"
+    (leave) => String(leave.status || "").toUpperCase() === "REJECTED"
   ).length;
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/backend/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    } finally {
+      window.location.href = "/login";
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
-      {/* Professional Header */}
+      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-5 py-4 sm:flex-row sm:items-center lg:px-8">
           <Link
@@ -229,6 +251,13 @@ export default function LeaveHistoryPage() {
             </Link>
 
             <Link
+              href="/employee/apply-leave"
+              className="rounded-lg px-3 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-blue-800"
+            >
+              Apply Leave
+            </Link>
+
+            <Link
               href="/employee/leave-history"
               className="rounded-lg bg-blue-50 px-3 py-2 font-semibold text-blue-800"
             >
@@ -241,18 +270,23 @@ export default function LeaveHistoryPage() {
             >
               Profile
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-slate-700 transition hover:bg-slate-50"
+            >
+              Logout
+            </button>
           </nav>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-10">
-        {/* Back Button */}
-        <div className="mb-5">
+        {/* Page Heading with Back Button */}
+        <div className="mb-8 flex items-center gap-3">
           <BackButton fallback="/employee/dashboard" />
-        </div>
 
-        {/* Page Heading */}
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
               Employee Services
@@ -354,7 +388,6 @@ export default function LeaveHistoryPage() {
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
-
             <button
               onClick={fetchLeaves}
               className="ml-3 font-semibold underline"
@@ -371,7 +404,6 @@ export default function LeaveHistoryPage() {
               <h3 className="text-lg font-bold text-slate-900">
                 Leave Applications
               </h3>
-
               <p className="mt-1 text-sm text-slate-500">
                 Your submitted requests and their current status.
               </p>
@@ -385,7 +417,6 @@ export default function LeaveHistoryPage() {
           {loading ? (
             <div className="p-12 text-center">
               <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-700" />
-
               <p className="mt-4 text-sm text-slate-500">
                 Loading your leave history...
               </p>
@@ -410,34 +441,17 @@ export default function LeaveHistoryPage() {
               <table className="w-full min-w-[850px] text-left">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-6 py-4 font-semibold">
-                      Leave Type
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Start Date
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      End Date
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Days
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Status
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Action
-                    </th>
+                    <th className="px-6 py-4 font-semibold">Leave Type</th>
+                    <th className="px-6 py-4 font-semibold">Start Date</th>
+                    <th className="px-6 py-4 font-semibold">End Date</th>
+                    <th className="px-6 py-4 font-semibold">Days</th>
+                    <th className="px-6 py-4 font-semibold">Status</th>
+                    <th className="px-6 py-4 font-semibold">Action</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                  {leaves.map((leave) => {
+                  {currentLeaves.map((leave) => {
                     const status = String(
                       leave.status || "PENDING"
                     ).toUpperCase();
@@ -503,6 +517,55 @@ export default function LeaveHistoryPage() {
               </table>
             </div>
           )}
+
+          {/* Pagination */}
+          {!loading && leaves.length > 0 && (
+            <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-100 px-6 py-5 sm:flex-row">
+              <p className="text-sm text-slate-500">
+                Showing {startIndex + 1} to{" "}
+                {Math.min(startIndex + itemsPerPage, leaves.length)} of{" "}
+                {leaves.length} applications
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => page - 1)}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+
+                {Array.from(
+                  { length: totalPages },
+                  (_, index) => index + 1
+                ).map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`h-9 min-w-9 rounded-lg px-3 text-sm font-semibold ${
+                      currentPage === page
+                        ? "bg-blue-800 text-white"
+                        : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => page + 1)}
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Information */}
@@ -514,7 +577,6 @@ export default function LeaveHistoryPage() {
               <h3 className="text-sm font-bold text-blue-900">
                 Leave Application Information
               </h3>
-
               <p className="mt-1 text-sm leading-6 text-blue-800">
                 Pending applications can be cancelled. Approved, rejected,
                 or cancelled applications remain in your history for
@@ -529,7 +591,7 @@ export default function LeaveHistoryPage() {
         </footer>
       </div>
 
-      {/* Custom Cancellation Modal */}
+      {/* Cancellation Modal */}
       {selectedLeave && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"

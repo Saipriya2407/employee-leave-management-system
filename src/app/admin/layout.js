@@ -205,6 +205,7 @@ const [today, setToday] = useState(null);
                 today !== null &&
                 isCurrentMonth &&
                 today.getDate() === day;
+                
 
                 return (
                   <div

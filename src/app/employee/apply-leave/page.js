@@ -305,6 +305,19 @@ export default function ApplyLeavePage() {
     }
   }
 
+  async function handleLogout() {
+    try {
+      await fetch("/api/backend/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    } finally {
+      window.location.href = "/login";
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
@@ -338,21 +351,34 @@ export default function ApplyLeavePage() {
             </Link>
 
             <Link
+              href="/employee/leave-history"
+              className="rounded-lg px-3 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-blue-800"
+            >
+              Leave History
+            </Link>
+
+            <Link
               href="/employee/profile"
               className="rounded-lg px-3 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-blue-800"
             >
               Profile
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-slate-700 transition hover:bg-slate-50"
+            >
+              Logout
+            </button>
           </nav>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-10">
-        <div className="mb-5">
+        <div className="mb-8 flex items-center gap-3">
           <BackButton fallback="/employee/dashboard" />
-        </div>
 
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
               Employee Services
@@ -496,8 +522,7 @@ export default function ApplyLeavePage() {
                         Available Leave Balance
                       </p>
                       <p className="mt-1 text-xs text-blue-700">
-                        {selectedLeaveType.name} · Current Quarter Q
-                        {currentQuarter}
+                        {selectedLeaveType.name} · Current Quarter Q{currentQuarter}
                       </p>
                     </div>
 
