@@ -1,19 +1,15 @@
+
+
 import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import {
   successResponse,
   errorResponse,
 } from "@/lib/response";
-import {
-  getQuarterFromDate,
-  getOrCreateQuarterlyEntitlement,
-  calculateAvailableBalance,
-} from "@/lib/quarterly-policy";
-
+import { getQuarterFromDate } from "@/lib/quarterly-policy";
 
 export async function GET(request) {
   try {
-    // Verify login
     const auth = await requireAuth(request);
 
     if (!auth.authorized) {
@@ -25,7 +21,6 @@ export async function GET(request) {
 
     let userId = auth.user.id;
 
-    // Only Admin can view another employee's balance
     if (requestedUserId && requestedUserId !== auth.user.id) {
       if (auth.user.role !== "ADMIN") {
         return errorResponse(
@@ -37,72 +32,124 @@ export async function GET(request) {
       userId = requestedUserId;
     }
 
-    // Verify employee exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        fullName: true,
-      },
-    });
+    const now = new Date();
+    const { year, quarter } = getQuarterFromDate(now);
+
+    const [user, leaveTypes] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          fullName: true,
+        },
+      }),
+
+      prisma.leaveType.findMany({
+        where: {
+          isActive: true,
+          code: { in: ["CASUAL", "SICK", "WFH"] },
+          effectiveFrom: { lte: now },
+        },
+        orderBy: { name: "asc" },
+      }),
+    ]);
 
     if (!user) {
       return errorResponse("Employee not found.", 404);
     }
 
-    // Get current quarter
-    const { year, quarter } = getQuarterFromDate(new Date());
+    const leaveTypeIds = leaveTypes.map((type) => type.id);
 
-    // Get active leave types
-    const leaveTypes = await prisma.leaveType.findMany({
-      where: {
-        isActive: true,
-        effectiveFrom: {
-          lte: new Date(),
-        },
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    // Retrieve or create quarterly entitlements
-    const balances = await prisma.$transaction(
-      async (tx) => {
-        const result = [];
-
-        for (const leaveType of leaveTypes) {
-          const entitlement =
-            await getOrCreateQuarterlyEntitlement(
-              tx,
+    const records =
+      leaveTypeIds.length > 0
+        ? await prisma.quarterlyEntitlement.findMany({
+            where: {
               userId,
-              leaveType,
               year,
-              quarter
-            );
+              quarter: { lte: quarter },
+              leaveTypeId: { in: leaveTypeIds },
+            },
+            select: {
+              leaveTypeId: true,
+              quarter: true,
+              allocatedDays: true,
+              usedDays: true,
+              reservedDays: true,
+            },
+          })
+        : [];
 
-          result.push({
-            leaveTypeId: leaveType.id,
-            name: leaveType.name,
-            code: leaveType.code,
-            annualQuota: leaveType.annualQuota,
-            quarterlyQuota: leaveType.quarterlyQuota,
-            carryForwardAllowed:
-              leaveType.carryForwardAllowed,
-            year,
-            quarter,
-            ...calculateAvailableBalance(entitlement),
-          });
+    const recordMap = new Map();
+
+    for (const record of records) {
+      recordMap.set(
+        `${record.leaveTypeId}_${record.quarter}`,
+        record
+      );
+    }
+
+    const balances = leaveTypes.map((type) => {
+      let carryInDays = 0;
+      let current = null;
+
+      for (let q = 1; q <= quarter; q++) {
+        const record = recordMap.get(`${type.id}_${q}`);
+
+        const allocatedDays =
+          record?.allocatedDays ?? type.quarterlyQuota;
+
+        const usedDays = record?.usedDays ?? 0;
+        const reservedDays = record?.reservedDays ?? 0;
+
+        if (q === quarter) {
+          current = {
+            allocatedDays,
+            usedDays,
+            reservedDays,
+          };
         }
 
-        return result;
-      },
-      {
-        isolationLevel: "Serializable",
-        maxWait: 10000,
-        timeout: 20000,
+        if (type.carryForwardAllowed && q < quarter) {
+          carryInDays = Math.max(
+            0,
+            allocatedDays +
+              carryInDays -
+              usedDays -
+              reservedDays
+          );
+        } else if (!type.carryForwardAllowed) {
+          carryInDays = 0;
+        }
       }
-    );
+
+      const allocated = current?.allocatedDays ?? type.quarterlyQuota;
+      const used = current?.usedDays ?? 0;
+      const reserved = current?.reservedDays ?? 0;
+      const effectiveCarryIn = type.carryForwardAllowed
+        ? carryInDays
+        : 0;
+
+      const available = Math.max(
+        0,
+        allocated + effectiveCarryIn - used - reserved
+      );
+
+      return {
+        leaveTypeId: type.id,
+        name: type.name,
+        code: type.code,
+        annualQuota: type.annualQuota,
+        quarterlyQuota: type.quarterlyQuota,
+        carryForwardAllowed: type.carryForwardAllowed,
+        year,
+        quarter,
+        allocated,
+        carryIn: effectiveCarryIn,
+        used,
+        reserved,
+        available,
+      };
+    });
 
     return successResponse(
       {
@@ -114,16 +161,8 @@ export async function GET(request) {
       "Quarterly leave balances retrieved successfully.",
       200
     );
-
   } catch (error) {
     console.error("Get Leave Balance Error:", error);
-
-    if (error.code === "P2034") {
-      return errorResponse(
-        "Concurrent update detected. Please try again.",
-        409
-      );
-    }
 
     return errorResponse(
       "Unable to retrieve leave balances.",
@@ -131,3 +170,4 @@ export async function GET(request) {
     );
   }
 }
+

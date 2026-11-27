@@ -21,6 +21,73 @@ const VALID_STATUSES = [
   "CANCELLED",
 ];
 
+// Synchronize current-quarter available balances
+async function syncLeaveBalance(tx, userId) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const quarter = Math.floor(now.getMonth() / 3) + 1;
+
+  const leaveTypes = await tx.leaveType.findMany({
+    where: {
+      isActive: true,
+      code: {
+        in: ["CASUAL", "SICK", "WFH"],
+      },
+    },
+  });
+
+  const summary = {
+    casualLeave: 0,
+    sickLeave: 0,
+    workFromHome: 0,
+  };
+
+  for (const type of leaveTypes) {
+    const entitlement =
+      await tx.quarterlyEntitlement.findUnique({
+        where: {
+          userId_year_quarter_leaveTypeId: {
+            userId,
+            year,
+            quarter,
+            leaveTypeId: type.id,
+          },
+        },
+      });
+
+    const available = entitlement
+      ? Math.max(
+          0,
+          entitlement.allocatedDays +
+            entitlement.carryInDays -
+            entitlement.usedDays -
+            entitlement.reservedDays
+        )
+      : 0;
+
+    if (type.code === "CASUAL") {
+      summary.casualLeave = available;
+    }
+
+    if (type.code === "SICK") {
+      summary.sickLeave = available;
+    }
+
+    if (type.code === "WFH") {
+      summary.workFromHome = available;
+    }
+  }
+
+  await tx.leaveBalance.upsert({
+    where: { userId },
+    update: summary,
+    create: {
+      userId,
+      ...summary,
+    },
+  });
+}
+
 // POST: Apply for leave
 export async function POST(request) {
   try {
@@ -50,7 +117,6 @@ export async function POST(request) {
       return errorResponse("Reason is required.", 400);
     }
 
-    // Validate leave dates
     const dateCheck = validateDateRange(
       startDate,
       endDate,
@@ -74,7 +140,6 @@ export async function POST(request) {
       );
     }
 
-    // Find active leave type
     const code = leaveType.trim().toUpperCase();
 
     const typeRecord = await prisma.leaveType.findFirst({
@@ -94,10 +159,8 @@ export async function POST(request) {
       );
     }
 
-    // Split request across calendar quarters
     const segments = splitRequestByQuarters(start, end);
 
-    // Prevent overlapping pending or approved applications
     const overlappingLeave =
       await prisma.leaveApplication.findFirst({
         where: {
@@ -121,7 +184,7 @@ export async function POST(request) {
       );
     }
 
-    // Create application and reserve quarterly balance
+    // Create application, reserve entitlement and synchronize summary
     const newLeave = await prisma.$transaction(
       async (tx) => {
         const application = await tx.leaveApplication.create({
@@ -146,6 +209,9 @@ export async function POST(request) {
           segments,
           application.id
         );
+
+        // Update leave_balances after reservation
+        await syncLeaveBalance(tx, auth.user.id);
 
         return application;
       },
@@ -208,15 +274,12 @@ export async function GET(request) {
 
     const where = {};
 
-    // Employees can view only their own applications.
-    // Admins can view all applications or filter by employee.
     if (auth.user.role === "EMPLOYEE") {
       where.userId = auth.user.id;
     } else if (requestedUserId) {
       where.userId = requestedUserId;
     }
 
-    // Filter by leave status
     if (status) {
       if (!VALID_STATUSES.includes(status)) {
         return errorResponse(
@@ -228,7 +291,6 @@ export async function GET(request) {
       where.status = status;
     }
 
-    // Filter by leave type
     if (leaveType) {
       where.leaveType = {
         is: {
@@ -240,7 +302,6 @@ export async function GET(request) {
     const leaves = await prisma.leaveApplication.findMany({
       where,
       include: {
-        // Employee details for Admin Leave Applications
         user: {
           select: {
             id: true,
@@ -250,7 +311,6 @@ export async function GET(request) {
             department: true,
           },
         },
-
         leaveType: {
           select: {
             id: true,
@@ -258,7 +318,6 @@ export async function GET(request) {
             code: true,
           },
         },
-
         allocations: {
           include: {
             entitlement: true,

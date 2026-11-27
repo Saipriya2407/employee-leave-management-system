@@ -16,6 +16,7 @@ model User {
   department            String
   role                  UserRole               @default(EMPLOYEE)
   createdAt             DateTime               @default(now())
+
   leaveApplications     LeaveApplication[]
   leaveBalance          LeaveBalance?
   quarterlyEntitlements QuarterlyEntitlement[]
@@ -33,6 +34,7 @@ model LeaveType {
   isActive              Boolean                @default(true)
   effectiveFrom         DateTime               @default(now())
   createdAt             DateTime               @default(now())
+
   applications          LeaveApplication[]
   quarterlyEntitlements QuarterlyEntitlement[]
 
@@ -50,6 +52,7 @@ model LeaveApplication {
   status       LeaveStatus              @default(PENDING)
   adminRemarks String?
   appliedAt    DateTime                 @default(now())
+
   leaveType    LeaveType                @relation(fields: [leaveTypeId], references: [id])
   user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   allocations  LeaveRequestAllocation[]
@@ -66,7 +69,8 @@ model LeaveBalance {
   userId      String @unique
   casualLeave Int    @default(0)
   sickLeave   Int    @default(0)
-  earnedLeave Int    @default(0)
+  workFromHome Int    @default(0)
+
   user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("leave_balances")
@@ -85,6 +89,7 @@ model QuarterlyEntitlement {
   carryOutDays     Int                      @default(0)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
+
   leaveAllocations LeaveRequestAllocation[]
   leaveType        LeaveType                @relation(fields: [leaveTypeId], references: [id])
   user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -100,6 +105,7 @@ model LeaveRequestAllocation {
   leaveApplicationId     String
   quarterlyEntitlementId String
   allocatedDays          Int
+
   leaveApplication       LeaveApplication     @relation(fields: [leaveApplicationId], references: [id], onDelete: Cascade)
   entitlement            QuarterlyEntitlement @relation(fields: [quarterlyEntitlementId], references: [id])
 
@@ -107,7 +113,8 @@ model LeaveRequestAllocation {
   @@index([quarterlyEntitlementId])
   @@map("leave_request_allocations")
 }
-  model EmployeeCodeCounter {
+
+model EmployeeCodeCounter {
   role  UserRole @id
   value Int      @default(0)
 
@@ -125,18 +132,19 @@ model PasswordResetToken {
   @@index([userId])
   @@map("password_reset_tokens")
 }
+
 model AdminRegistrationRequest {
-  id             String   @id @default(cuid())
-  fullName       String
-  email          String   @unique
-  password       String
-  department     String
-  status         AdminRequestStatus @default(PENDING)
-  reviewedById   String?
-  reviewedAt     DateTime?
-  adminRemarks   String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id           String            @id @default(cuid())
+  fullName     String
+  email        String            @unique
+  password     String
+  department   String
+  status       AdminRequestStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  adminRemarks String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   @@index([status])
   @@map("admin_registration_requests")
@@ -153,8 +161,20 @@ enum LeaveStatus {
   REJECTED
   CANCELLED
 }
+
 enum AdminRequestStatus {
   PENDING
   APPROVED
   REJECTED
+  }
+
+model PublicHoliday {
+  id          String   @id @default(cuid())
+  name        String
+  date        DateTime
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([date])
+  @@map("public_holidays")
 }

@@ -2,16 +2,25 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import BackButton from "@/components/BackButton";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function AdminLeaveApplications() {
   const [applications, setApplications] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
+
+  const [showModal, setShowModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [adminRemarks, setAdminRemarks] = useState("");
 
   // Fetch leave applications
   const fetchApplications = useCallback(async () => {
@@ -27,8 +36,6 @@ export default function AdminLeaveApplications() {
 
       const data = await response.json();
 
-      console.log("Admin Leave API Response:", data);
-
       if (!response.ok) {
         throw new Error(
           data.message || "Unable to fetch leave applications."
@@ -40,10 +47,10 @@ export default function AdminLeaveApplications() {
       const leaves = Array.isArray(result)
         ? result
         : Array.isArray(result.leaves)
-        ? result.leaves
-        : Array.isArray(result.applications)
-        ? result.applications
-        : [];
+          ? result.leaves
+          : Array.isArray(result.applications)
+            ? result.applications
+            : [];
 
       setApplications(leaves);
     } catch (err) {
@@ -58,7 +65,6 @@ export default function AdminLeaveApplications() {
     fetchApplications();
   }, [fetchApplications]);
 
-  // Employee name
   function getEmployeeName(application) {
     return (
       application.user?.fullName ||
@@ -70,7 +76,6 @@ export default function AdminLeaveApplications() {
     );
   }
 
-  // Employee email
   function getEmployeeEmail(application) {
     return (
       application.user?.email ||
@@ -80,7 +85,6 @@ export default function AdminLeaveApplications() {
     );
   }
 
-  // Employee department
   function getDepartment(application) {
     return (
       application.user?.department ||
@@ -90,7 +94,6 @@ export default function AdminLeaveApplications() {
     );
   }
 
-  // Employee code
   function getEmployeeCode(application) {
     return (
       application.user?.employeeCode ||
@@ -99,7 +102,6 @@ export default function AdminLeaveApplications() {
     );
   }
 
-  // Leave type
   function getLeaveType(application) {
     return (
       application.leaveType?.name ||
@@ -112,7 +114,6 @@ export default function AdminLeaveApplications() {
     );
   }
 
-  // Date formatting
   function formatDate(date) {
     if (!date) return "N/A";
 
@@ -129,7 +130,6 @@ export default function AdminLeaveApplications() {
     });
   }
 
-  // Leave dates
   function getLeaveDates(application) {
     const start = application.startDate || application.fromDate;
     const end = application.endDate || application.toDate;
@@ -139,7 +139,6 @@ export default function AdminLeaveApplications() {
     return `${formatDate(start)} - ${formatDate(end)}`;
   }
 
-  // Leave days
   function getLeaveDays(application) {
     if (application.totalDays !== undefined) {
       return application.totalDays;
@@ -165,7 +164,6 @@ export default function AdminLeaveApplications() {
     return "N/A";
   }
 
-  // Status styling
   function getStatusClass(status) {
     const currentStatus = String(status || "").toUpperCase();
 
@@ -187,44 +185,47 @@ export default function AdminLeaveApplications() {
     return "bg-yellow-100 text-yellow-700";
   }
 
+  function openStatusModal(application, newStatus) {
+    setSelectedApplication(application);
+    setSelectedStatus(newStatus);
+    setAdminRemarks("");
+    setError("");
+    setMessage("");
+    setShowModal(true);
+  }
+
+  function closeStatusModal() {
+    if (updatingId !== null) return;
+
+    setShowModal(false);
+    setSelectedApplication(null);
+    setSelectedStatus("");
+    setAdminRemarks("");
+  }
+
   // Approve or reject leave application
-  async function updateLeaveStatus(application, newStatus) {
-    const leaveId = application.id || application.leaveId;
+  async function updateLeaveStatus() {
+    if (!selectedApplication || !selectedStatus) return;
+
+    const leaveId =
+      selectedApplication.id || selectedApplication.leaveId;
 
     if (!leaveId) {
       setError("Leave application ID is missing.");
       return;
     }
 
-    let adminRemarks = "";
-
-    if (newStatus === "REJECTED") {
-      const enteredRemarks = window.prompt(
-        "Enter the reason for rejecting this leave application:"
-      );
-
-      if (enteredRemarks === null) return;
-
-      adminRemarks = enteredRemarks.trim();
-
-      if (!adminRemarks) {
-        alert("Admin remarks are required.");
-        return;
-      }
-    } else {
-      if (
-        !window.confirm(
-          "Are you sure you want to approve this leave application?"
-        )
-      ) {
-        return;
-      }
+    if (
+      selectedStatus === "REJECTED" &&
+      !adminRemarks.trim()
+    ) {
+      setError("Please enter a reason for rejecting this application.");
+      return;
     }
 
     try {
       setUpdatingId(leaveId);
       setError("");
-      setMessage("");
 
       const response = await fetch(
         `/api/backend/admin/leaves/${encodeURIComponent(leaveId)}`,
@@ -235,9 +236,9 @@ export default function AdminLeaveApplications() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            status: newStatus,
-            ...(newStatus === "REJECTED"
-              ? { adminRemarks }
+            status: selectedStatus,
+            ...(selectedStatus === "REJECTED"
+              ? { adminRemarks: adminRemarks.trim() }
               : {}),
           }),
         }
@@ -252,10 +253,15 @@ export default function AdminLeaveApplications() {
       }
 
       setMessage(
-        newStatus === "APPROVED"
+        selectedStatus === "APPROVED"
           ? "Leave application approved successfully."
           : "Leave application rejected successfully."
       );
+
+      setShowModal(false);
+      setSelectedApplication(null);
+      setSelectedStatus("");
+      setAdminRemarks("");
 
       await fetchApplications();
     } catch (err) {
@@ -266,7 +272,7 @@ export default function AdminLeaveApplications() {
     }
   }
 
-  // Search and filter
+  // Search and status filtering
   const filteredApplications = useMemo(() => {
     return applications.filter((application) => {
       const employeeName = getEmployeeName(application);
@@ -295,6 +301,31 @@ export default function AdminLeaveApplications() {
     });
   }, [applications, search, statusFilter]);
 
+  // Pagination
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredApplications.length / ITEMS_PER_PAGE)
+  );
+
+  const paginatedApplications = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+
+    return filteredApplications.slice(
+      startIndex,
+      startIndex + ITEMS_PER_PAGE
+    );
+  }, [filteredApplications, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const pendingCount = applications.filter(
     (item) =>
       String(item.status || "PENDING").toUpperCase() === "PENDING"
@@ -310,68 +341,33 @@ export default function AdminLeaveApplications() {
       String(item.status || "").toUpperCase() === "REJECTED"
   ).length;
 
+  const startItem =
+    filteredApplications.length === 0
+      ? 0
+      : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+
+  const endItem = Math.min(
+    currentPage * ITEMS_PER_PAGE,
+    filteredApplications.length
+  );
+
   return (
-    <div className="min-h-screen bg-gray-100 md:flex">
-      {/* Sidebar */}
-      <aside className="w-full bg-blue-950 text-white md:min-h-screen md:w-64">
-        <div className="border-b border-blue-900 p-6">
-          <h1 className="text-2xl font-bold">ELMS</h1>
-          <p className="mt-1 text-sm text-blue-200">Admin Portal</p>
-        </div>
+    <div className="min-h-full bg-gray-100">
+      <main className="min-w-0 p-4 md:p-8">
 
-        <nav className="space-y-2 p-4">
-          <Link
-            href="/admin/dashboard"
-            className="block rounded-lg px-4 py-3 hover:bg-blue-900"
-          >
-            📊 Dashboard
-          </Link>
+        {/* Page Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3">
+            <BackButton fallback="/admin/dashboard" />
 
-          <Link
-            href="/admin/employees"
-            className="block rounded-lg px-4 py-3 hover:bg-blue-900"
-          >
-            👥 Employees
-          </Link>
-
-          <Link
-            href="/admin/leave-applications"
-            className="block rounded-lg bg-blue-700 px-4 py-3"
-          >
-            📋 Leave Applications
-          </Link>
-        </nav>
-
-        <div className="border-t border-blue-900 p-4 md:mt-10">
-          <button
-            onClick={() => {
-              window.location.href = "/login";
-            }}
-            className="w-full rounded-lg px-4 py-3 text-left hover:bg-red-700"
-          >
-            🚪 Logout
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="min-w-0 flex-1 p-4 md:p-8">
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
             <h2 className="text-3xl font-bold text-gray-900">
               Leave Applications
             </h2>
-            <p className="mt-2 text-gray-500">
-              View, approve, or reject employee leave requests.
-            </p>
           </div>
 
-          <Link
-            href="/admin/dashboard"
-            className="rounded-lg bg-blue-700 px-5 py-2.5 text-center font-semibold text-white hover:bg-blue-800"
-          >
-            ← Back to Dashboard
-          </Link>
+          <p className="mt-2 ml-11 text-gray-500">
+            View, approve, or reject employee leave requests.
+          </p>
         </div>
 
         {/* Statistics */}
@@ -413,7 +409,7 @@ export default function AdminLeaveApplications() {
         )}
 
         {/* Error message */}
-        {error && (
+        {error && !showModal && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
             <p className="font-medium text-red-700">{error}</p>
             <button
@@ -467,7 +463,8 @@ export default function AdminLeaveApplications() {
               Employee Leave Requests
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Showing {filteredApplications.length} applications
+              Showing {startItem}-{endItem} of{" "}
+              {filteredApplications.length} applications
             </p>
           </div>
 
@@ -516,7 +513,7 @@ export default function AdminLeaveApplications() {
 
                 {!loading &&
                   !error &&
-                  filteredApplications.map((application, index) => {
+                  paginatedApplications.map((application, index) => {
                     const applicationId =
                       application.id || application.leaveId || index;
 
@@ -574,29 +571,25 @@ export default function AdminLeaveApplications() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() =>
-                                  updateLeaveStatus(application, "APPROVED")
+                                  openStatusModal(application, "APPROVED")
                                 }
                                 disabled={isUpdating}
                                 className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
                               >
-                                {isUpdating ? "Updating..." : "Approve"}
+                                Approve
                               </button>
 
                               <button
                                 onClick={() =>
-                                  updateLeaveStatus(application, "REJECTED")
+                                  openStatusModal(application, "REJECTED")
                                 }
                                 disabled={isUpdating}
                                 className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                               >
-                                {isUpdating ? "Updating..." : "Reject"}
+                                Reject
                               </button>
                             </div>
-                          ) : (
-                            <span className="text-sm text-gray-400">
-                              No action
-                            </span>
-                          )}
+                          ) : null}
                         </td>
                       </tr>
                     );
@@ -604,12 +597,158 @@ export default function AdminLeaveApplications() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {!loading &&
+            !error &&
+            filteredApplications.length > ITEMS_PER_PAGE && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-5 py-4">
+                <p className="text-sm text-gray-500">
+                  Page {currentPage} of {totalPages}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+
+                  {Array.from(
+                    { length: totalPages },
+                    (_, index) => index + 1
+                  ).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`h-9 min-w-9 rounded-lg px-3 text-sm font-semibold ${
+                        currentPage === page
+                          ? "bg-blue-900 text-white"
+                          : "border border-gray-300 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() =>
+                      setCurrentPage((page) =>
+                        Math.min(totalPages, page + 1)
+                      )
+                    }
+                    disabled={currentPage === totalPages}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
         </div>
 
         <footer className="mt-8 border-t border-gray-200 py-5 text-center text-sm text-gray-500">
           Employee Leave Management System © 2026
         </footer>
       </main>
+
+      {/* Custom Approval / Rejection Modal */}
+      {showModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              closeStatusModal();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="leave-modal-title"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+          >
+            <h2
+              id="leave-modal-title"
+              className="text-xl font-bold text-gray-900"
+            >
+              {selectedStatus === "APPROVED"
+                ? "Approve Leave Application"
+                : "Reject Leave Application"}
+            </h2>
+
+            <p className="mt-2 text-sm text-gray-600">
+              {selectedStatus === "APPROVED"
+                ? "Are you sure you want to approve this leave application?"
+                : "Please provide a reason for rejecting this leave application."}
+            </p>
+
+            {selectedStatus === "REJECTED" && (
+              <div className="mt-5">
+                <label
+                  htmlFor="adminRemarks"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Rejection Reason
+                </label>
+
+                <textarea
+                  id="adminRemarks"
+                  value={adminRemarks}
+                  onChange={(e) => {
+                    setAdminRemarks(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="Enter the reason for rejection..."
+                  rows={4}
+                  autoFocus
+                  className="w-full rounded-lg border border-gray-300 p-3 text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            )}
+
+            {error && showModal && (
+              <p className="mt-3 text-sm text-red-600">{error}</p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeStatusModal}
+                disabled={updatingId !== null}
+                className="rounded-lg border border-gray-300 px-5 py-2.5 font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={updateLeaveStatus}
+                disabled={
+                  updatingId !== null ||
+                  (selectedStatus === "REJECTED" &&
+                    !adminRemarks.trim())
+                }
+                className={`rounded-lg px-5 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+                  selectedStatus === "APPROVED"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {updatingId !== null
+                  ? "Updating..."
+                  : selectedStatus === "APPROVED"
+                    ? "Confirm Approval"
+                    : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
