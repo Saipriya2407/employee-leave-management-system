@@ -1,4 +1,4 @@
-
+export const VALID_LEAVE_TYPES = ["CASUAL", "SICK", "WFH"];
 export const VALID_LEAVE_STATUSES = [
   "PENDING",
   "APPROVED",
