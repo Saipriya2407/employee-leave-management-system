@@ -4,26 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-   "build": "prisma generate && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma skills sync || exit 0"
   },
-  
- "dependencies": {
-  "@prisma/adapter-pg": "^7.10.1",
-  "@prisma/client": "^7.10.1",
-  "bcryptjs": "^3.0.3",
-  "jose": "^6.2.17",
-  "jsonwebtoken": "^9.0.3",
-  "next": "16.4.5",
-  "nodemailer": "^10.5.0",
-  "pg": "^8.23.1",
-  "react": "19.3.0",
-  "react-dom": "19.3.0"
-},
-  
-
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.17",
+    "jsonwebtoken": "^9.0.3",
+    "next": "16.4.5",
+    "nodemailer": "^10.5.0",
+    "pg": "^8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
     "@types/pg": "^8.23.1",
@@ -32,6 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "prisma": "^7.10.1",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15"
   }
 }
