@@ -1,32 +1,19 @@
-/*
-  Warnings:
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
 
-  - You are about to drop the `LeaveApplication` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `LeaveBalance` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `User` table. If the table is not empty, all the data it contains will be lost.
+-- CreateEnum
+CREATE TYPE "UserRole" AS ENUM ('EMPLOYEE', 'ADMIN');
 
-*/
--- DropForeignKey
-ALTER TABLE "LeaveApplication" DROP CONSTRAINT "LeaveApplication_userId_fkey";
+-- CreateEnum
+CREATE TYPE "LeaveStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED');
 
--- DropForeignKey
-ALTER TABLE "LeaveBalance" DROP CONSTRAINT "LeaveBalance_userId_fkey";
-
--- DropTable
-DROP TABLE "LeaveApplication";
-
--- DropTable
-DROP TABLE "LeaveBalance";
-
--- DropTable
-DROP TABLE "User";
-
--- DropEnum
-DROP TYPE "LeaveType";
+-- CreateEnum
+CREATE TYPE "AdminRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
+    "employeeCode" TEXT,
     "fullName" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
@@ -74,7 +61,7 @@ CREATE TABLE "leave_balances" (
     "userId" TEXT NOT NULL,
     "casualLeave" INTEGER NOT NULL DEFAULT 0,
     "sickLeave" INTEGER NOT NULL DEFAULT 0,
-    "earnedLeave" INTEGER NOT NULL DEFAULT 0,
+    "workFromHome" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "leave_balances_pkey" PRIMARY KEY ("id")
 );
@@ -106,6 +93,57 @@ CREATE TABLE "leave_request_allocations" (
 
     CONSTRAINT "leave_request_allocations_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateTable
+CREATE TABLE "employee_code_counters" (
+    "role" "UserRole" NOT NULL,
+    "value" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "employee_code_counters_pkey" PRIMARY KEY ("role")
+);
+
+-- CreateTable
+CREATE TABLE "password_reset_tokens" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "tokenHash" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "usedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "password_reset_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "admin_registration_requests" (
+    "id" TEXT NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "department" TEXT NOT NULL,
+    "status" "AdminRequestStatus" NOT NULL DEFAULT 'PENDING',
+    "reviewedById" TEXT,
+    "reviewedAt" TIMESTAMP(3),
+    "adminRemarks" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "admin_registration_requests_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public_holidays" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "public_holidays_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_employeeCode_key" ON "users"("employeeCode");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
@@ -143,20 +181,35 @@ CREATE INDEX "leave_request_allocations_quarterlyEntitlementId_idx" ON "leave_re
 -- CreateIndex
 CREATE UNIQUE INDEX "leave_request_allocations_leaveApplicationId_quarterlyEntit_key" ON "leave_request_allocations"("leaveApplicationId", "quarterlyEntitlementId");
 
--- AddForeignKey
-ALTER TABLE "leave_applications" ADD CONSTRAINT "leave_applications_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE UNIQUE INDEX "password_reset_tokens_tokenHash_key" ON "password_reset_tokens"("tokenHash");
+
+-- CreateIndex
+CREATE INDEX "password_reset_tokens_userId_idx" ON "password_reset_tokens"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "admin_registration_requests_email_key" ON "admin_registration_requests"("email");
+
+-- CreateIndex
+CREATE INDEX "admin_registration_requests_status_idx" ON "admin_registration_requests"("status");
+
+-- CreateIndex
+CREATE INDEX "public_holidays_date_idx" ON "public_holidays"("date");
 
 -- AddForeignKey
 ALTER TABLE "leave_applications" ADD CONSTRAINT "leave_applications_leaveTypeId_fkey" FOREIGN KEY ("leaveTypeId") REFERENCES "leave_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "leave_applications" ADD CONSTRAINT "leave_applications_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "leave_balances" ADD CONSTRAINT "leave_balances_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "quarterly_entitlements" ADD CONSTRAINT "quarterly_entitlements_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "quarterly_entitlements" ADD CONSTRAINT "quarterly_entitlements_leaveTypeId_fkey" FOREIGN KEY ("leaveTypeId") REFERENCES "leave_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "quarterly_entitlements" ADD CONSTRAINT "quarterly_entitlements_leaveTypeId_fkey" FOREIGN KEY ("leaveTypeId") REFERENCES "leave_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "quarterly_entitlements" ADD CONSTRAINT "quarterly_entitlements_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "leave_request_allocations" ADD CONSTRAINT "leave_request_allocations_leaveApplicationId_fkey" FOREIGN KEY ("leaveApplicationId") REFERENCES "leave_applications"("id") ON DELETE CASCADE ON UPDATE CASCADE;
