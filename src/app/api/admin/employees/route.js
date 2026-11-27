@@ -2,6 +2,7 @@
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/permissions";
 import { successResponse, errorResponse } from "@/lib/response";
+import { getOrCreateQuarterlyEntitlement } from "@/lib/quarterly-policy";
 
 export async function GET(request) {
   try {
@@ -12,6 +13,7 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
+
     const search = searchParams.get("search");
     const department = searchParams.get("department");
     const role = searchParams.get("role");
@@ -23,7 +25,10 @@ export async function GET(request) {
 
     const limit = Math.min(
       100,
-      Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10)
+      Math.max(
+        1,
+        parseInt(searchParams.get("limit") || "10", 10) || 10
+      )
     );
 
     const skip = (page - 1) * limit;
@@ -36,16 +41,28 @@ export async function GET(request) {
       };
     }
 
-    where.role = role?.trim()
-      ? role.trim().toUpperCase()
-      : "EMPLOYEE";
+    if (role?.trim()) {
+      where.role = role.trim().toUpperCase();
+    } else {
+      where.role = "EMPLOYEE";
+    }
 
     if (search?.trim()) {
-      const term = search.trim();
+      const trimmedSearch = search.trim();
 
       where.OR = [
-        { fullName: { contains: term, mode: "insensitive" } },
-        { email: { contains: term, mode: "insensitive" } },
+        {
+          fullName: {
+            contains: trimmedSearch,
+            mode: "insensitive",
+          },
+        },
+        {
+          email: {
+            contains: trimmedSearch,
+            mode: "insensitive",
+          },
+        },
       ];
     }
 
@@ -53,126 +70,106 @@ export async function GET(request) {
     const year = now.getFullYear();
     const quarter = Math.floor(now.getMonth() / 3) + 1;
 
-    const [totalEmployees, employees, leaveTypes] = await Promise.all([
-      prisma.user.count({ where }),
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const [totalEmployees, employees, leaveTypes] =
+          await Promise.all([
+            tx.user.count({ where }),
 
-      prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          employeeCode: true,
-          fullName: true,
-          email: true,
-          department: true,
-          role: true,
-          createdAt: true,
-        },
-      }),
+            tx.user.findMany({
+              where,
+              skip,
+              take: limit,
+              orderBy: {
+                createdAt: "desc",
+              },
+              select: {
+                id: true,
+                employeeCode: true,
+                fullName: true,
+                email: true,
+                department: true,
+                role: true,
+                createdAt: true,
+              },
+            }),
 
-      prisma.leaveType.findMany({
-        where: {
-          isActive: true,
-          code: { in: ["CASUAL", "SICK", "WFH"] },
-          effectiveFrom: { lte: now },
-        },
-        orderBy: { name: "asc" },
-      }),
-    ]);
+            tx.leaveType.findMany({
+              where: {
+                isActive: true,
+                code: {
+                  in: ["CASUAL", "SICK", "WFH"],
+                },
+                effectiveFrom: {
+                  lte: now,
+                },
+              },
+              orderBy: {
+                name: "asc",
+              },
+            }),
+          ]);
 
-    const employeeIds = employees.map((employee) => employee.id);
-    const leaveTypeIds = leaveTypes.map((type) => type.id);
+        const employeesWithBalances = [];
 
-    const entitlements =
-      employeeIds.length && leaveTypeIds.length
-        ? await prisma.quarterlyEntitlement.findMany({
-            where: {
-              userId: { in: employeeIds },
-              leaveTypeId: { in: leaveTypeIds },
-              year,
-              quarter: { lte: quarter },
-            },
-            select: {
-              userId: true,
-              leaveTypeId: true,
-              quarter: true,
-              allocatedDays: true,
-              carryInDays: true,
-              usedDays: true,
-              reservedDays: true,
-            },
-          })
-        : [];
+        for (const employee of employees) {
+          const leaveBalance = {};
 
-    const entitlementMap = new Map();
+          for (const type of leaveTypes) {
+            const entitlement =
+              await getOrCreateQuarterlyEntitlement(
+                tx,
+                employee.id,
+                type,
+                year,
+                quarter
+              );
 
-    for (const record of entitlements) {
-      entitlementMap.set(
-        `${record.userId}_${record.leaveTypeId}_${record.quarter}`,
-        record
-      );
-    }
+            const available =
+              entitlement.allocatedDays +
+              entitlement.carryInDays -
+              entitlement.usedDays -
+              entitlement.reservedDays;
 
-    const employeesWithBalances = employees.map((employee) => {
-      const leaveBalance = {};
-
-      for (const type of leaveTypes) {
-        let carryIn = 0;
-        let current = null;
-
-        for (let q = 1; q <= quarter; q++) {
-          const key = `${employee.id}_${type.id}_${q}`;
-          const record = entitlementMap.get(key);
-
-          const allocated = record?.allocatedDays ?? type.quarterlyQuota;
-          const used = record?.usedDays ?? 0;
-          const reserved = record?.reservedDays ?? 0;
-
-          if (q === quarter) {
-            current = { allocated, used, reserved };
+            leaveBalance[type.code] = {
+              name: type.name,
+              allocated: entitlement.allocatedDays,
+              carryIn: entitlement.carryInDays,
+              used: entitlement.usedDays,
+              reserved: entitlement.reservedDays,
+              available: Math.max(0, available),
+            };
           }
 
-          if (type.carryForwardAllowed && q < quarter) {
-            carryIn = Math.max(
-              0,
-              allocated + carryIn - used - reserved
-            );
-          } else if (!type.carryForwardAllowed) {
-            carryIn = 0;
-          }
+          employeesWithBalances.push({
+            ...employee,
+            leaveBalance,
+          });
         }
 
-        const allocated = current?.allocated ?? type.quarterlyQuota;
-        const used = current?.used ?? 0;
-        const reserved = current?.reserved ?? 0;
-        const effectiveCarryIn = type.carryForwardAllowed ? carryIn : 0;
-
-        leaveBalance[type.code] = {
-          name: type.name,
-          allocated,
-          carryIn: effectiveCarryIn,
-          used,
-          reserved,
-          available: Math.max(
-            0,
-            allocated + effectiveCarryIn - used - reserved
-          ),
+        return {
+          totalEmployees,
+          employees: employeesWithBalances,
         };
+      },
+      {
+        maxWait: 10000,
+        timeout: 60000,
       }
+    );
 
-      return { ...employee, leaveBalance };
-    });
-
-    const totalPages = Math.ceil(totalEmployees / limit) || 1;
+    const totalPages =
+      Math.ceil(result.totalEmployees / limit) || 1;
 
     return successResponse(
       {
-        employees: employeesWithBalances,
-        currentPeriod: { year, quarter },
+        employees: result.employees,
+        currentPeriod: {
+          year,
+          quarter,
+        },
         pagination: {
-          total: totalEmployees,
+          total: result.totalEmployees,
           page,
           limit,
           totalPages,
@@ -180,9 +177,9 @@ export async function GET(request) {
           hasPrevPage: page > 1,
         },
       },
-      employees.length === 0
+      result.employees.length === 0
         ? "No employees found matching the criteria."
-        : `Retrieved ${employees.length} employee(s).`,
+        : `Retrieved ${result.employees.length} employee(s).`,
       200
     );
   } catch (error) {
