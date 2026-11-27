@@ -2,7 +2,7 @@
 "use client";
 
 import BackButton from "@/components/BackButton";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 export default function EmployeeProfilePage() {
@@ -44,10 +44,13 @@ export default function EmployeeProfilePage() {
       setLoading(false);
     }
   }
-
+const hasFetchedProfile = useRef(false);
   useEffect(() => {
-    fetchProfile();
-  }, []);
+  if (hasFetchedProfile.current) return;
+
+  hasFetchedProfile.current = true;
+  fetchProfile();
+}, []);
 
   async function handleLogout() {
     try {

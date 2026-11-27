@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect,useRef, useState } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 
@@ -53,11 +53,14 @@ export default function LeaveHistoryPage() {
       setLoading(false);
     }
   }, []);
+  const hasFetchedLeaves = useRef(false);
+  
+useEffect(() => {
+  if (hasFetchedLeaves.current) return;
 
-  useEffect(() => {
-    fetchLeaves();
-  }, [fetchLeaves]);
-
+  hasFetchedLeaves.current = true;
+  fetchLeaves();
+}, [fetchLeaves]);
   const totalPages = Math.ceil(leaves.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
 
