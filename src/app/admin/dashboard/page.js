@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -388,7 +387,6 @@ export default function AdminDashboard() {
         </header>
 
         <div className="space-y-8 p-6">
-
           {/* Welcome Section */}
           <section className="rounded-2xl bg-gradient-to-r from-blue-800 to-blue-600 p-6 text-white">
             <p className="text-sm font-medium text-blue-100">
@@ -472,6 +470,7 @@ export default function AdminDashboard() {
             </h2>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {/* Manage Employees */}
               <Link
                 href="/admin/employees"
                 className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-500 hover:shadow-md"
@@ -491,6 +490,7 @@ export default function AdminDashboard() {
                 </p>
               </Link>
 
+              {/* Manage Leave Applications */}
               <Link
                 href="/admin/leave-applications"
                 className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-500 hover:shadow-md"
@@ -510,6 +510,7 @@ export default function AdminDashboard() {
                 </p>
               </Link>
 
+              {/* Leave Creation */}
               <Link
                 href="/admin/holidays"
                 className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-500 hover:shadow-md"
@@ -526,6 +527,26 @@ export default function AdminDashboard() {
 
                 <p className="mt-4 font-semibold text-blue-700">
                   Manage Holidays →
+                </p>
+              </Link>
+
+              {/* Calendar */}
+              <Link
+                href="/admin/calendar"
+                className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-500 hover:shadow-md"
+              >
+                <div className="text-3xl">📅</div>
+
+                <h3 className="mt-4 font-bold text-gray-900">
+                  Calendar
+                </h3>
+
+                <p className="mt-2 text-sm text-gray-500">
+                  View public holidays in the monthly calendar.
+                </p>
+
+                <p className="mt-4 font-semibold text-blue-700">
+                  View Calendar →
                 </p>
               </Link>
             </div>
